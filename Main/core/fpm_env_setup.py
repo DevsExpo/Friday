@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by FridaySoftware@Github, < https://github.com/FridaySoftware >.
+# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
 #
-# This file is part of < https://github.com/FridaySoftware/Friday > project,
+# This file is part of < https://github.com/StarkGang/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/FridaySoftware/Friday/blob/main/LICENSE >
+# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -248,7 +248,7 @@ def sync_xtra_plugins_repos() -> bool:
     if not load_xtra:
         return True
 
-    repos_str = os.environ.get("XTRA_PLUGINS_REPOS", "https://github.com/FridaySoftware/XtraPlugins").strip()
+    repos_str = os.environ.get("XTRA_PLUGINS_REPOS", "https://github.com/StarkGang/XtraPlugins").strip()
     if not repos_str:
         return True
 

@@ -51,8 +51,8 @@ async def test_localdatabase_mock_matching_mongo():
 
 def test_plugin_metadata_and_github_provider():
     """Verify PluginManager parses GitHub repos and handles plugin registry."""
-    provider = GitHubPluginProvider("https://github.com/FridaySoftware/Plugins")
-    assert provider.repo_url == "https://github.com/FridaySoftware/Plugins"
+    provider = GitHubPluginProvider("https://github.com/StarkGang/Plugins")
+    assert provider.repo_url == "https://github.com/StarkGang/Plugins"
     assert provider.repo_name == "Plugins"
 
     pm = PluginManager()

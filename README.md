@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/FridaySoftware/Friday"><img src="https://img.shields.io/badge/Friday-v2.0-007ACC.svg?style=flat-square&logo=telegram" alt="Friday Version"></a>
+  <a href="https://github.com/StarkGang/Friday"><img src="https://img.shields.io/badge/Friday-v2.0-007ACC.svg?style=flat-square&logo=telegram" alt="Friday Version"></a>
   <a href="https://www.python.org"><img src="https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=flat-square&logo=python&logoColor=white" alt="Python 3.10+"></a>
   <a href="https://github.com/LonamiWebs/Telethon"><img src="https://img.shields.io/badge/Telethon-Async-blue.svg?style=flat-square" alt="Telethon"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-green.svg?style=flat-square" alt="License"></a>
@@ -33,7 +33,7 @@
 
 ```bash
 # Clone repository
-git clone https://github.com/FridaySoftware/Friday.git
+git clone https://github.com/StarkGang/Friday.git
 cd Friday
 
 # Copy environment template

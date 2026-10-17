@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by FridaySoftware@Github, < https://github.com/FridaySoftware >.
+# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
 #
-# This file is part of < https://github.com/FridaySoftware/Friday > project,
+# This file is part of < https://github.com/StarkGang/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/FridaySoftware/Friday/blob/main/LICENSE >
+# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -49,10 +49,10 @@ GITHUB_RAW_BASE = "https://raw.githubusercontent.com/{repo}/{branch}/{path}"
 GITHUB_ARCHIVE_BASE = "https://github.com/{repo}/archive/refs/heads/{branch}.zip"
 
 PLUGIN_SHORTCUTS: Dict[str, str] = {
-    "vc": "FridaySoftware/VCPlugin",
-    "vcplugin": "FridaySoftware/VCPlugin",
-    "xtra": "FridaySoftware/XtraPlugins",
-    "xtraplugins": "FridaySoftware/XtraPlugins",
+    "vc": "StarkGang/VCPlugin",
+    "vcplugin": "StarkGang/VCPlugin",
+    "xtra": "StarkGang/XtraPlugins",
+    "xtraplugins": "StarkGang/XtraPlugins",
 }
 
 
@@ -415,7 +415,7 @@ class PluginManager:
         Install a plugin with optional subcategory segregation.
         Example: install('vc') or install('username/XtraPlugins', subcategories=['media', 'utilities'])
         """
-        # Resolve package shortcuts (e.g. 'vc' -> 'FridaySoftware/VCPlugin')
+        # Resolve package shortcuts (e.g. 'vc' -> 'StarkGang/VCPlugin')
         src_clean = source.strip().lower()
         if src_clean in PLUGIN_SHORTCUTS:
             source = PLUGIN_SHORTCUTS[src_clean]

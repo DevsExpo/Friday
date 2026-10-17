@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-MAIN_URL='https://github.com/FridaySoftware/Friday'
+MAIN_URL='https://github.com/StarkGang/Friday'
 if [ '-install' == $1 ]; then
     clone_main_repo=true
 else

@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by FridaySoftware@Github, < https://github.com/FridaySoftware >.
+# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
 #
-# This file is part of < https://github.com/FridaySoftware/Friday > project,
+# This file is part of < https://github.com/StarkGang/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/FridaySoftware/Friday/blob/main/LICENSE >
+# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -156,7 +156,7 @@ SUDO_USERS=""
 LOG_CHAT_ID=
 DEBUG=false
 LOAD_XTRA_PLUGINS=true
-XTRA_PLUGINS_REPOS=https://github.com/FridaySoftware/XtraPlugins
+XTRA_PLUGINS_REPOS=https://github.com/StarkGang/XtraPlugins
 """
     with open(env_path, "w", encoding="utf-8") as f:
         f.write(env_content)

@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by FridaySoftware@Github, < https://github.com/FridaySoftware >.
+# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
 #
-# This file is part of < https://github.com/FridaySoftware/Friday > project,
+# This file is part of < https://github.com/StarkGang/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/FridaySoftware/Friday/blob/main/LICENSE >
+# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -49,8 +49,8 @@ async def fpm_hub_cmd(c, m: Message):
 @Friday.register_on_cmd(
     ["fpm_install", "fpminstall"],
     cmd_help={
-        "example": "fpm_install vc (auto-maps to FridaySoftware/VCPlugin)\nfpm_install https://github.com/username/XtraPlugins -sub media,lifestyle",
-        "help": "Install external plugins with optional subcategory segregation and fast dependency resolution. Supports shortcuts like 'vc' for FridaySoftware/VCPlugin.",
+        "example": "fpm_install vc (auto-maps to StarkGang/VCPlugin)\nfpm_install https://github.com/username/XtraPlugins -sub media,lifestyle",
+        "help": "Install external plugins with optional subcategory segregation and fast dependency resolution. Supports shortcuts like 'vc' for StarkGang/VCPlugin.",
         "user_args": [
             {
                 "arg": "sub",
@@ -82,9 +82,9 @@ async def install_pack(c, m: Message):
 
     source = raw.strip()
     if source.lower() in ("vc", "vcplugin"):
-        source = "FridaySoftware/VCPlugin"
+        source = "StarkGang/VCPlugin"
     elif source.lower() in ("xtra", "xtraplugins"):
-        source = "FridaySoftware/XtraPlugins"
+        source = "StarkGang/XtraPlugins"
 
     # Priority 1: Use modern PluginManager (FPM v3)
     if Friday.plugin_manager is not None:

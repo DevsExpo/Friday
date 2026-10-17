@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by FridaySoftware@Github, < https://github.com/FridaySoftware >.
+# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
 #
-# This file is part of < https://github.com/FridaySoftware/Friday > project,
+# This file is part of < https://github.com/StarkGang/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/FridaySoftware/Friday/blob/main/LICENSE >
+# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -73,7 +73,7 @@ class BaseConfig:
     HELP_MENU_ROWS = int(os.getenv("HELP_MENU_ROWS", 6)) if str(os.getenv("HELP_MENU_ROWS", "6")).isdigit() else 6
     HELP_MENU_COLUMNS = int(os.getenv("HELP_MENU_COLUMNS", 3)) if str(os.getenv("HELP_MENU_COLUMNS", "3")).isdigit() else 3
 
-    DEFAULT_REPO = "https://github.com/FridaySoftware/Friday"
+    DEFAULT_REPO = "https://github.com/StarkGang/Friday"
     HEROKU_API_KEY = os.getenv("HEROKU_API_KEY")
     REPO = os.getenv("CUSTOM_REPO") or DEFAULT_REPO
 
@@ -97,7 +97,7 @@ class BaseConfig:
     ALIVE_MEDIA = os.getenv("ALIVE_MEDIA")
     LOAD_XTRA_PLUGINS = os.getenv("LOAD_XTRA_PLUGINS", "true").lower() in {"true", "yes", "1", "enable"}
     XTRA_PLUGINS_REPOS: List[str] = [
-        r.strip() for r in re.split(r"[, ]+", os.getenv("XTRA_PLUGINS_REPOS", "https://github.com/FridaySoftware/XtraPlugins")) if r.strip()
+        r.strip() for r in re.split(r"[, ]+", os.getenv("XTRA_PLUGINS_REPOS", "https://github.com/StarkGang/XtraPlugins")) if r.strip()
     ]
 
     def reload_from_env(self) -> None:
@@ -123,7 +123,7 @@ class BaseConfig:
         self.HEROKU_APP_NAME = os.getenv("HEROKU_APP_NAME")
         self.HELP_MENU_ROWS = int(os.getenv("HELP_MENU_ROWS", 6)) if str(os.getenv("HELP_MENU_ROWS", "6")).isdigit() else 6
         self.HELP_MENU_COLUMNS = int(os.getenv("HELP_MENU_COLUMNS", 3)) if str(os.getenv("HELP_MENU_COLUMNS", "3")).isdigit() else 3
-        self.DEFAULT_REPO = "https://github.com/FridaySoftware/Friday"
+        self.DEFAULT_REPO = "https://github.com/StarkGang/Friday"
         self.HEROKU_API_KEY = os.getenv("HEROKU_API_KEY")
         self.REPO = os.getenv("CUSTOM_REPO") or self.DEFAULT_REPO
         self.UPDATE_ON_STARTUP = os.getenv("UPDATE_ON_STARTUP", "false").strip().lower() in {
@@ -145,7 +145,7 @@ class BaseConfig:
         self.ALIVE_MEDIA = os.getenv("ALIVE_MEDIA")
         self.LOAD_XTRA_PLUGINS = os.getenv("LOAD_XTRA_PLUGINS", "true").lower() in {"true", "yes", "1", "enable"}
         self.XTRA_PLUGINS_REPOS = [
-            r.strip() for r in re.split(r"[, ]+", os.getenv("XTRA_PLUGINS_REPOS", "https://github.com/FridaySoftware/XtraPlugins")) if r.strip()
+            r.strip() for r in re.split(r"[, ]+", os.getenv("XTRA_PLUGINS_REPOS", "https://github.com/StarkGang/XtraPlugins")) if r.strip()
         ]
 
     def digit_wrap(self, digit_: Any) -> Union[str, int]:
