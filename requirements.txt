@@ -4,7 +4,7 @@ certifi
 dnspython>=2.6
 telethon>=1.36.0
 cryptg>=0.4.0
-httpx[http2]>=0.27
+httpx[http2]>=0.28.1
 markdown
 motor>=3.4
 pymongo>=4.7

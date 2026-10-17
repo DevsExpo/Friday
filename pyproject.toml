@@ -16,7 +16,7 @@ dependencies = [
     "beautifulsoup4>=4.12",
     "certifi",
     "dnspython>=2.6",
-    "httpx[http2]>=0.27",
+    "httpx[http2]>=0.28.1",
     "markdown",
     "motor>=3.4",
     "pymongo>=4.7",
