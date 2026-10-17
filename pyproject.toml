@@ -20,7 +20,7 @@ dependencies = [
     "markdown",
     "motor>=3.4",
     "pymongo>=4.7",
-    "gtts>=2.5",
+    "gtts>=2.5.4",
     "psutil>=5.9",
     "hachoir>=3.3",
     "cachetools>=5.3",
