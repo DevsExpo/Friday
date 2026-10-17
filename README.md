@@ -91,8 +91,6 @@ Configure your credentials in `.env` or through environment variables:
 | `SUDO_CMD_HANDLER` | Optional | `!` | Command prefix for authorized sudo operators. |
 | `SUDO_USERS` | Optional | `[]` | List of trusted user IDs permitted to invoke bot commands. |
 | `LOG_CHAT_ID` | Optional | `None` | Private Telegram chat or channel ID where bot logs and tracebacks are relayed. |
-| `OCR_SPACE_API_KEY` | Optional | `helloworld` | Optional custom key for OCR Space (defaults to zero-key public tier). |
-| `OCR_CUSTOM_API_URL`| Optional | `None` | Optional self-hosted AI OCR endpoint (Surya, PaddleOCR, vLLM). |
 
 ### Example `.env` File:
 ```env

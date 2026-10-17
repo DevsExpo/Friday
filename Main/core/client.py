@@ -39,7 +39,6 @@ from telethon import events, errors, functions, types
 from telethon.sessions import StringSession, MemorySession
 from cachetools import TTLCache
 
-from Main.core.fpm import FPM
 from Main.core.cache import Cache
 from Main.utils.paste import Paste
 from ..utils._updater import Updater

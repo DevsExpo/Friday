@@ -9,7 +9,7 @@
 import os
 from traceback import format_exc
 from Main import Friday
-from Main.core.fpm import *
+from Main.core.fpm import FPM
 from Main.core.types.message import Message
 
 packages_list = Friday.db.make_collection("packages") if Friday.db else None
@@ -132,33 +132,9 @@ async def install_pack(c, m: Message):
             if source.startswith(("http://", "https://", "git@")) or "/" in source:
                 return await msg.edit_msg(f"❌ <b>Installation Failed:</b> <code>{e}</code>")
 
-    # Priority 2: Fallback to legacy FPM client for bare package names
-    fpm_client = FPM(Friday)
-    try:
-        resp = await fpm_client.install_package(source, msg)
-    except Package404:
-        return await msg.edit_msg("PACKAGE_NOT_FOUND")
-    except AlreadyInstalled:
-        return await msg.edit_msg("ALREADY_FPM_INSTALLED", string_args=(source,))
-    except Exception as e:
-        logging.error(format_exc())
-        return await msg.edit_msg("PLUGIN_INSTALL_ERROR", string_args=(e,))
-
-    if os.path.exists("./Main/plugins/temp_app/"):
-        shutil.rmtree("./Main/plugins/temp_app/")
-
-    await msg.edit_msg(
-        "INSTALLED_PACKAGE", string_args=(resp.Name, resp.developer, resp.version)
+    return await msg.edit_msg(
+        f"❌ <b>Package not found:</b> <code>{source}</code>. Please provide a valid GitHub repository (e.g. <code>username/repo</code>) or shortcut."
     )
-    if "ios" in m.user_args and packages_list:
-        if pl := await packages_list.find_one({"_id": "FPM"}):
-            await packages_list.update_one(
-                {"_id": "FPM"}, {"$addToSet": {"installed_packages": resp.Name}}
-            )
-        else:
-            await packages_list.insert_one(
-                {"_id": "FPM", "installed_packages": [resp.Name]}
-            )
 
 
 @Friday.register_on_cmd(
@@ -375,17 +351,7 @@ async def uninstall_pack(c, m: Message):
         except Exception as e:
             return await msg.edit_msg(f"❌ Uninstall failed: <code>{e}</code>")
 
-    # Legacy fallback
-    fpm_client = FPM(Friday)
-    try:
-        resp = await fpm_client.uninstall_package(pn)
-        if packages_list:
-            await packages_list.update_one(
-                {"_id": "FPM"}, {"$pull": {"installed_packages": pn}}
-            )
-        await msg.edit_msg(resp)
-    except Exception as e:
-        await msg.edit_msg(f"❌ Error: <code>{e}</code>")
+    return await msg.edit_msg(f"❌ Plugin <code>{pn}</code> is not installed.")
 
 
 @Friday.register_on_cmd(
@@ -413,9 +379,4 @@ async def update_pack(c, m: Message):
         except Exception as e:
             return await msg.edit_msg(f"❌ Update error: <code>{e}</code>")
 
-    fpm_client = FPM(Friday)
-    try:
-        resp = await fpm_client.update_package(pn, msg)
-        await msg.edit_msg(resp)
-    except Exception as e:
-        await msg.edit_msg(f"❌ Error: <code>{e}</code>")
+    return await msg.edit_msg(f"❌ Could not update plugin <code>{pn}</code>.")
