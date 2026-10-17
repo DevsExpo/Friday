@@ -35,7 +35,7 @@ dependencies = [
     "pillow>=10.0",
     "ffmpeg-python>=0.2",
     "aiohttp-cors>=0.7",
-    "loguru>=0.7",
+    "loguru>=0.7.3",
 ]
 
 [project.optional-dependencies]
