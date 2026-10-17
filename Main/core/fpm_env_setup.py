@@ -263,7 +263,7 @@ def sync_xtra_plugins_repos() -> bool:
             repo_name = "XtraPlugins"
 
         target_dir = Path(f"./{repo_name}")
-        print(f"[XTRA PLUGINS] Syncing repository: {repo_url} -> ./{repo_name}")
+        print(f"[FRIDAY PACKAGE MANAGER] Syncing repository: {repo_url} -> ./{repo_name}")
 
         try:
             git_dir = target_dir / ".git"
@@ -278,31 +278,31 @@ def sync_xtra_plugins_repos() -> bool:
                     is_valid_repo = True
 
             if not target_dir.exists():
-                print(f"[XTRA PLUGINS] Cloning {repo_url} into ./{repo_name}...")
+                print(f"[FRIDAY PACKAGE MANAGER] Cloning {repo_url} into ./{repo_name}...")
                 subprocess.run(["git", "clone", "--depth", "1", repo_url, str(target_dir)], check=True)
-                print(f"✅ [XTRA PLUGINS] Cloned ./{repo_name} successfully.")
+                print(f"✅ [FRIDAY PACKAGE MANAGER] Cloned ./{repo_name} successfully.")
             elif not is_valid_repo:
                 # Directory exists but is empty or broken from a previous failed clone
-                print(f"[XTRA PLUGINS] Recovering repository in ./{repo_name} from {repo_url}...")
+                print(f"[FRIDAY PACKAGE MANAGER] Recovering repository in ./{repo_name} from {repo_url}...")
                 subprocess.run(["git", "-C", str(target_dir), "init"], check=True)
                 subprocess.run(["git", "-C", str(target_dir), "remote", "remove", "origin"], capture_output=True, check=False)
                 subprocess.run(["git", "-C", str(target_dir), "remote", "add", "origin", repo_url], check=True)
                 subprocess.run(["git", "-C", str(target_dir), "fetch", "--depth", "1", "origin"], check=True)
                 subprocess.run(["git", "-C", str(target_dir), "reset", "--hard", "FETCH_HEAD"], check=True)
-                print(f"✅ [XTRA PLUGINS] Repaired and synced ./{repo_name} successfully.")
+                print(f"✅ [FRIDAY PACKAGE MANAGER] Repaired and synced ./{repo_name} successfully.")
             else:
                 # Ensure origin remote URL always matches repo_url in case upstream changed
                 subprocess.run(["git", "-C", str(target_dir), "remote", "set-url", "origin", repo_url], check=False)
                 pull_res = subprocess.run(["git", "-C", str(target_dir), "pull", "--ff-only"], capture_output=True, text=True, check=False)
                 if pull_res.returncode == 0:
-                    print(f"✅ [XTRA PLUGINS] Synced ./{repo_name} successfully.")
+                    print(f"✅ [FRIDAY PACKAGE MANAGER] Synced ./{repo_name} successfully.")
                 else:
                     fetch_res = subprocess.run(["git", "-C", str(target_dir), "fetch", "--depth", "1", "origin"], capture_output=True, check=False)
                     if fetch_res.returncode == 0:
                         subprocess.run(["git", "-C", str(target_dir), "reset", "--hard", "FETCH_HEAD"], capture_output=True, check=False)
-                        print(f"✅ [XTRA PLUGINS] Updated ./{repo_name} successfully.")
+                        print(f"✅ [FRIDAY PACKAGE MANAGER] Updated ./{repo_name} successfully.")
                     else:
-                        print(f"ℹ️ [XTRA PLUGINS] Local changes detected in ./{repo_name}, preserving local state.")
+                        print(f"ℹ️ [FRIDAY PACKAGE MANAGER] Local changes detected in ./{repo_name}, preserving local state.")
 
             req_file = target_dir / "requirements.txt"
             if req_file.exists():
@@ -313,11 +313,11 @@ def sync_xtra_plugins_repos() -> bool:
                 ]
                 missing = [d for d in deps if not is_package_satisfied(d)]
                 if missing:
-                    print(f"📦 [XTRA PLUGINS] Installing {len(missing)} missing dependencies for {repo_name}...")
+                    print(f"📦 [FRIDAY PACKAGE MANAGER] Installing {len(missing)} missing dependencies for {repo_name}...")
                     subprocess.run([sys.executable, "-m", "pip", "install", "--prefer-binary", *missing], check=True)
-                    print(f"✅ [XTRA PLUGINS] Dependencies for {repo_name} installed.")
+                    print(f"✅ [FRIDAY PACKAGE MANAGER] Dependencies for {repo_name} installed.")
         except Exception as e:
-            print(f"⚠️ [XTRA PLUGINS] Error syncing repository {repo_url}: {e}")
+            print(f"⚠️ [FRIDAY PACKAGE MANAGER] Error syncing repository {repo_url}: {e}")
             all_success = False
 
     return all_success
