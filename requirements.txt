@@ -3,7 +3,7 @@ beautifulsoup4>=4.12
 certifi
 dnspython>=2.6
 telethon>=1.36.0
-cryptg>=0.4.0
+cryptg>=0.5.2
 httpx[http2]>=0.27
 markdown
 motor>=3.4
