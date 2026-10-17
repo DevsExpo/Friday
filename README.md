@@ -1,106 +1,232 @@
-<p align="center"><a href="https://t.me/fridayot"><img src="https://telegra.ph/file/22535f8051a58af113586.jpg" width="5000"></a></p> 
-<h1 align="center"><b>FRIDAY-USERBOT 🇮🇳 </b></h1>
-<h4 align="center">A Powerful, Smart And Simple Userbot In Pyrogram.</h4>
+<h1 align="center"><b>Friday</b></h1>
+<p align="center"><img src="Main/assets/images/logo.png" width="1155px"><br></p>
 
+<p align="center">
+  <b>A high-performance, modular Telegram UserBot and Assistant Bot engine built on Telethon & modern asynchronous Python.</b><br>
+  <i>Adapted from <a href="https://github.com/Altruix/Altruix">Altruix</a></i>
+</p>
 
-## Support 🚑
-<a href="https://t.me/FridaySupportOfficial"><img src="https://img.shields.io/badge/Join-Telegram%20Channel-red.svg?logo=Telegram"></a>
-<a href="https://t.me/fridayOT"><img src="https://img.shields.io/badge/Join-Telegram%20Group-blue.svg?logo=telegram"></a>
+<p align="center">
+  <a href="https://github.com/DevsExpo/Friday"><img src="https://img.shields.io/badge/Friday-v2.0-007ACC.svg?style=flat-square&logo=telegram" alt="Friday Version"></a>
+  <a href="https://www.python.org"><img src="https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=flat-square&logo=python&logoColor=white" alt="Python 3.10+"></a>
+  <a href="https://github.com/LonamiWebs/Telethon"><img src="https://img.shields.io/badge/Telethon-Async-blue.svg?style=flat-square" alt="Telethon"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-green.svg?style=flat-square" alt="License"></a>
+  <a href="https://t.me/FridayUB"><img src="https://img.shields.io/badge/Channel-@FridayUB-red.svg?style=flat-square&logo=telegram" alt="Channel"></a>
+  <a href="https://t.me/FridayChat"><img src="https://img.shields.io/badge/Community-@FridayChat-blue.svg?style=flat-square&logo=telegram" alt="Support Chat"></a>
+</p>
 
-## Inspiration & Credits
-* [Userge-X](https://github.com/code-rgb/USERGE-X/contributors)
-* [Userge](https://github.com/UsergeTeam/Userge)
-* [Pokurt](https://github.com/UsergeTeam/Pokurt)
-* [Pyrogram](https://github.com/pyrogram/pyrogram/contributors)
+---
 
-## Code Owners
-* [Chsaiujwal](https://github.com/chsaiujwal)
-* [Aditya](https://github.com/Aditya-XD)
-* [Lakhac](https://github.com/Lakhac)
-* [InukaAsith](https://github.com/InukaAsith)
-* [SHRE-YANSH](https://github.com/SHRE-YANSH)
+## ⚡ Highlights & Capabilities
 
-# String Session - Pyrogram 🖱
-### Repl 🧨
-[![Run on Repl.it](https://repl.it/badge/github/STARKGANG/friday)](https://replit.com/@MIDHUNKMKM/StringGen)
-### Locally 🏆
-```
-$ git clone https://github.com/DevsExpo/FridayUB
-$ cd FridayUB
-$ python(3) string_gen.py
-```
+* **Dual-Engine Operation**: Seamlessly pairs **Telethon StringSessions** (Userbot) with an interactive **Telegram Bot Token** (Assistant Bot) under a single unified process.
+* **FPM v3 (Friday Package Manager)**: Hot-install, update, and segregate third-party plugin suites directly from GitHub repositories without touching core code.
+* **Zero-Latency Boot**: Pre-flight `importlib` dependency satisfaction eliminates slow `pip` invocations during startup.
+* **Multi-Domain Ecosystem**: First-class support for media synthesis, deep OSINT, everyday utilities, and group automation.
+* **Universal Database**: Zero-config local SQLite persistence (`friday.db`) out of the box, with seamless high-throughput MongoDB, PostgreSQL, and Redis support.
+* **Multi-Session Multi-Client**: Run and manage multiple user sessions concurrently from a single instance.
 
-# Hosting 🖥
+---
 
-### Deploying To Heroku / Railway ⚙
+## 🚀 Quick Start & Deployment
 
-[![Deploy To Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/DevsExpo/FridayUB)
+### 1. Local / VPS Deployment
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https%3A%2F%2Fgithub.com%2FDevsExpo%2FFridayUB&envs=API_HASH%2CAPI_ID%2CBOT_TOKEN%2CLOG_GRP%2CMONGO_DB%2CSTRINGSESSION%2CTZ&optionalEnvs=BOT_TOKEN%2CCOMMAND_HANDLER%2CUPSTREAM_REPO&API_HASHDesc=Get+this+value+from+my.telegram.org%21+Please+do+not+steal&API_IDDesc=Get+this+value+from+my.telegram.org%21+Please+do+not+steal&BOT_TOKENDesc=Your+Bot+Token+Obtained+From+%40BotFather.+This+is+Not+Important&COMMAND_HANDLERDesc=Your+Command+Handler.&LOAD_UNOFFICIAL_PLUGINSDesc=Do+You+Wish+To+Load+X-Tra+Plugins%3F&LOG_GRPDesc=A+Group+ID+Where+You+Want+To+Log+Important+Logs.&MONGO_DBDesc=Create+A+Database+In+Mongodb+And+Get+URL.+Make+Sure+To+Enter+Correct+URL%21&STRINGSESSIONDesc=String+Session%2C+Run+string_gen.py+to+get+String+Session.&TZDesc=Your+Time+Zone&LOAD_UNOFFICIAL_PLUGINSDefault=True&TZDefault=Asia%2FKolkata)
+```bash
+# Clone repository
+git clone https://github.com/DevsExpo/Friday.git
+cd Friday
 
+# Copy environment template
+cp example.env .env
 
-### Self-hosting (For Devs) ⚔
-```sh
-# Install Git First // (Else You Can Download And Upload to Your Local Server)
-$ git clone https://github.com/DevsExpo/FridayUB
-# Open Git Cloned File
-$ cd FridayUB
-# Install All Requirements 
-$ pip(3) install -r requirements.txt
-# Create local.env with variables as given below
-# Start Bot 
-$ python(3) -m main_startup
+# Install core dependencies
+python -m pip install -e .
+
+# Launch Friday
+python -m Main
 ```
 
+### 2. Pre-Boot Dependency Verification
+To prepare external plugin dependencies before launching the bot (ideal for Docker, Termux, and VPS deployments):
 
-### Mandatory Configs 📒
-```
-[+] Make Sure You Add All These Mandatory Vars. 
-    [-] API_ID:   You can get this value from https://my.telegram.org
-    [-] API_HASH :   You can get this value from https://my.telegram.org
-    [-] STRINGSESSION : Your String Session, You can get this From Repl or BY running String_Gen File Locally
-    [-] MONGO_DB : Your Mongo DB DataBase Url. 
-    [-] LOG_GRP: Your Log Group/Channel Chat ID. This is Very Important and Some Modules Will Not Work Well Without This!
-[+] The fridayUserbot will not work without setting the mandatory vars.
-```
+```bash
+# Batch-install any missing plugin dependencies
+python -m Main.core.fpm_env_setup
 
-# Examples - Plugins 👊
-
-### Plugins 🔧
-
-```python3
-from main_startup.core.decorators import friday_on_cmd
-from main_startup.helper_func.basic_helpers import edit_or_reply
-
-@friday_on_cmd(['helloworld'],
-    cmd_help={
-    "help": "This is A TEST",
-    "example": "{ch}helloworld"
-    })
-async def hello_world(client, message):
-    mg = await edit_or_reply(message, "`Hello World! This Works!`")
-```
-### Custom Filters 📣
-
-```python3
-from main_startup.core.decorators import listen
-
-@listen(filters.mentioned)
-async def mentioned_(client, message):
-    await message.reply_text("`Hello World! By The Way Why Did You Mention Me?`")
+# Export unified external requirements for container builds
+python -m Main.core.fpm_env_setup --export
 ```
 
-# X-Tra Plugins 🎸
-* Please Visit [Xtra-Plugins](https://github.com/DevsExpo/Xtra-Plugins) To Checkout Xtra-Plugins.
+---
 
+## 🔑 Telethon StringSession Generation
 
-# Licence 📋
-[![GNU GPLv3 Image](https://www.gnu.org/graphics/gplv3-127x51.png)](http://www.gnu.org/licenses/gpl-3.0.en.html)  
+Friday authenticates your Telegram user account using **Telethon StringSessions**. You can generate one in two ways:
 
-* Copyright (C) 2020-2021 by DevsExpo@Github, < https://github.com/DevsExpo >.
+### Option A: Interactive CLI Terminal Generator
+```bash
+python -m Main.scripts.session_gen
+```
+Follow the terminal prompt to enter your phone number, two-factor password (if enabled), and OTP. The generated StringSession will be output directly to your terminal.
 
-FridayUB is Free Software: You can use, study share and improve it at your
-will. Specifically you can redistribute and/or modify it under the terms of the
-[GNU General Public License](https://www.gnu.org/licenses/gpl.html) as
-published by the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version. 
+### Option B: Interactive Assistant Bot
+Set your `BOT_TOKEN` in `.env` and start the bot. Send `/add` or `/session` to your bot in Telegram to generate and register sessions securely.
+
+---
+
+## ⚙️ Configuration Variables
+
+Configure your credentials in `.env` or through environment variables:
+
+| Variable | Required? | Default | Description |
+|---|:---:|---|---|
+| `API_ID` | **Yes** | — | Telegram App API ID obtained from [my.telegram.org](https://my.telegram.org/apps). |
+| `API_HASH` | **Yes** | — | Telegram App API Hash obtained from [my.telegram.org](https://my.telegram.org/apps). |
+| `SESSIONS` | **Yes** | `[]` | One or more Telethon StringSessions for userbot functionality. |
+| `BOT_TOKEN` | Optional | `None` | Telegram Bot Token from [@BotFather](https://t.me/BotFather) for the assistant bot. |
+| `OWNER_ID` | Optional | `None` | Telegram User ID of the primary owner (obtain via [@MissRose_Bot](https://t.me/MissRose_Bot) `/id`). |
+| `DB_URI` | Optional | `sqlite:///friday.db` | Database connection URI. Supports SQLite (`sqlite:///friday.db`), MongoDB (`mongodb+srv://`), PostgreSQL (`postgresql://`), or Redis (`redis://`). |
+| `DB_NAME` | Optional | `Friday` | Database collection namespace name. |
+| `CMD_HANDLER` | Optional | `.` | Command prefix for userbot commands (e.g. `.help`, `.ping`). |
+| `SUDO_CMD_HANDLER` | Optional | `!` | Command prefix for authorized sudo operators. |
+| `SUDO_USERS` | Optional | `[]` | List of trusted user IDs permitted to invoke bot commands. |
+| `LOG_CHAT_ID` | Optional | `None` | Private Telegram chat or channel ID where bot logs and tracebacks are relayed. |
+
+### Example `.env` File:
+```env
+API_ID=1234567
+API_HASH=abcdef0123456789abcdef0123456789
+BOT_TOKEN=123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ
+SESSIONS="1BJWap1wBu..."
+OWNER_ID=987654321
+CMD_HANDLER="."
+SUDO_CMD_HANDLER="!"
+
+# Choose your database backend (see Multi-Database section below):
+DB_URI="sqlite:///friday.db"
+DB_NAME="Friday"
+```
+
+---
+
+## 🗄️ Multi-Database Support (SQLite, Mongo, Postgres, & Redis)
+
+Friday features a **Universal Database Layer** powered by `PyMongoInstructionParser`. You can write standard async MongoDB syntax (`find()`, `find_one()`, `insert_one()`, `update_one()`, `delete_many()`, `$set`, `$inc`, `$push`) and Friday automatically routes and translates queries to your chosen backend:
+
+| Backend | `DB_URI` Format | Best For | Prerequisites |
+|---|---|---|---|
+| **SQLite (SQL)** *(Default)* | `sqlite:///friday.db` *(or leave empty)* | Single-server / VPS deployments & local testing | Built-in (zero-config, works out of the box) |
+| **MongoDB (NoSQL)** | `mongodb+srv://user:pass@cluster.mongodb.net/` | Scalable cloud database (MongoDB Atlas) | Running MongoDB cluster |
+| **PostgreSQL (SQL)** | `postgresql://user:pass@host:5432/dbname` | High-concurrency production deployments (Supabase, Neon) | Running PostgreSQL instance |
+| **Redis** | `redis://[:pass@]host:6379/0` | High-speed memory-backed cache/store | Running Redis instance |
+
+### How It Works Under The Hood:
+1. **Auto-Detection:** When Friday boots, `create_database(DB_URI)` detects the connection scheme.
+2. **Transparent Query Translation:** For SQL databases (PostgreSQL & SQLite), `PyMongoInstructionParser` compiles MongoDB query dicts and update operators directly into optimized parameterized SQL statements (`SELECT data FROM table WHERE ...`), storing documents as indexed JSON objects.
+3. **Async Cursor Parity:** Cursors across all backends implement standard async iteration (`async for item in col.find({...}):`), ensuring 100% plugin compatibility without writing backend-specific SQL.
+
+---
+
+## 📦 Friday Package Manager (FPM v3)
+
+Friday features a built-in package manager that installs, segregates, and updates modular plugins dynamically from GitHub without modifying core code.
+
+### Installing Plugins
+```text
+# Install a full plugin suite
+.fpm_install https://github.com/username/my-plugin
+
+# Install only specific segregated subcategories
+.fpm_install https://github.com/username/XtraPlugins -sub media,utilities
+
+# Persist package across bot restarts
+.fpm_install -ios https://github.com/username/my-plugin
+```
+
+### Managing Subcategories & Packages
+```text
+# List all installed plugins and active subcategories
+.fpm_list
+
+# Inspect segregated subcategories of an installed plugin
+.fpm_sub XtraPlugins
+
+# Enable a specific subcategory on the fly
+.fpm_enable XtraPlugins media
+
+# Disable a subcategory without deleting files
+.fpm_disable XtraPlugins shopping
+
+# Update an installed plugin to its latest GitHub release
+.fpm_update my-plugin
+
+# Uninstall and purge a plugin
+.fpm_uninstall my-plugin
+```
+
+### Diagnostics & Self-Healing
+```text
+# Run a full health audit of all plugins and Python dependencies
+.fpm_doctor
+
+# 1-click batch repair of any missing packages
+.fpm_repair
+```
+
+> 📖 **Developer Guide**: For creating custom plugins, decorator specifications, subcategory manifests, and database models, read the [Full Plugin Developer Guide](docs/PLUGIN_GUIDE.md).
+
+---
+
+## 🗂 Project Structure
+
+```text
+Friday/
+├── Main/
+│   ├── core/                  # Core client, FPM v3, database engine, decorators, types
+│   │   ├── client.py          # FridayClient engine & Telethon session orchestrator
+│   │   ├── plugin_manager.py  # FPM v3 plugin lifecycle, subcategories & quarantine
+│   │   ├── fpm_env_setup.py   # Pre-boot dependency verification & batch resolver
+│   │   ├── database.py        # MongoDB & Local JSON storage abstractions
+│   │   └── types/             # Telethon Message and Client enriched subclasses
+│   ├── plugins/
+│   │   ├── userbot/           # Built-in userbot commands (.ping, .eval, .fpm, etc.)
+│   │   ├── bot/               # Built-in assistant bot commands (/start, /help, callbacks)
+│   │   └── external/          # Dynamically installed FPM plugins & manifests
+│   ├── internals/             # System utilities, settings, session manager
+│   ├── localization/          # Multi-language string catalogs (en, hi, te, bn)
+│   └── scripts/               # Session generator, cleanup, maintenance utilities
+├── docs/                      # Architectural specifications & Plugin Developer Guide
+├── requirements.txt           # Minimal core framework dependencies
+├── external_requirements.txt  # Optional unified requirements for external plugin suites
+└── example.env                # Template configuration file
+```
+
+---
+
+## 👥 Credits & Acknowledgments
+
+* **[Altruix](https://github.com/Altruix/Altruix)**: Framework architecture adapted from Altruix.
+* **Telethon**: Pure Python MTProto library created by [LonamiWebs](https://github.com/LonamiWebs/Telethon).
+* **Friday Contributors**: Built and maintained with contributions from:
+  * [EverythingSuckz](https://github.com/EverythingSuckz)
+  * [DevsExpo](https://github.com/DevsExpo)
+  * [BilakshanP](https://github.com/BilakshanP)
+  * [Reeshuxd](https://github.com/Reeshuxd)
+  * [Rohith-Sreedharan](https://github.com/Rohith-Sreedharan)
+  * [StarkBotIndustries](https://github.com/StarkBotIndustries)
+  * [sohag02](https://github.com/sohag02)
+  * [SHRE-YANSH](https://github.com/SHRE-YANSH)
+  * [lostb053](https://github.com/lostb053)
+  * [Nksama](https://github.com/Nksama)
+  * [Crackexy](https://github.com/Crackexy)
+  * [anonyindian](https://github.com/anonyindian)
+  * [N0BLEWOLF](https://github.com/N0BLEWOLF)
+  * [ramanveerji](https://github.com/ramanveerji)
+  * [swatv3nub](https://github.com/swatv3nub)
+
+---
+
+## 📜 License
+
+This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for details.
