@@ -1,16 +1,12 @@
-# Copyright (C) 2020-2021 by DevsExpo@Github, < https://github.com/DevsExpo >.
-#
-# This file is part of < https://github.com/DevsExpo/FridayUB > project,
-# and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/DevsExpo/blob/master/LICENSE >
-#
-# All rights reserved.
-
-FROM python:3.9
-WORKDIR .
+FROM python:3.11-slim
+WORKDIR /app
 ENV PYTHONUNBUFFERED=1
-COPY requirements.txt .
-COPY startup.sh .
-RUN bash startup.sh
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY . .
-CMD ["python3", "-m", "main_startup"]
+RUN python -m pip install --no-cache-dir .
+
+CMD ["python", "-m", "Main"]

@@ -6,12 +6,21 @@ __pycache__/
 # C extensions
 *.so
 
+# Databases & local state
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+local_db.json
+
 # Distribution / packaging
 .Python
 build/
 develop-eggs/
 dist/
 downloads/
+temp/
 eggs/
 .eggs/
 lib/
@@ -58,6 +67,7 @@ coverage.xml
 # Django stuff:
 *.log
 local_settings.py
+local_db.json
 db.sqlite3
 db.sqlite3-journal
 
@@ -81,6 +91,9 @@ target/
 profile_default/
 ipython_config.py
 
+# Output
+output.txt
+
 # pyenv
 .python-version
 
@@ -91,8 +104,12 @@ ipython_config.py
 #   install all needed dependencies.
 #Pipfile.lock
 
-# celery beat schedule file
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow
+__pypackages__/
+
+# Celery stuff
 celerybeat-schedule
+celerybeat.pid
 
 # SageMath parsed files
 *.sage.py
@@ -113,6 +130,11 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
+# PyCharm project settings
+.idea/
+
+# vscode project settings
+.vscode/
 # mkdocs documentation
 /site
 
@@ -123,3 +145,24 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Friday
+*.env
+!example.env
+*.session
+*.session-journal
+friday.log
+db.json
+styles.axc
+test.py
+unknown_errors.txt
+
+# Eval output(s)
+eval_output
+cache/
+Main/plugins/userbot/.goutputstream-CIPMO1
+/XtraPlugins
+/XtraPluginsAI
+*.db
+/plug
+sessions_backup/
