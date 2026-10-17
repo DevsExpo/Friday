@@ -11,7 +11,7 @@ jobs:
           find: "FridayUserbot"
           replace: "FridayUB"
       - name: Pull All Updates
-        uses: stefanzweifel/git-auto-commit-action@v4
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: 'Update'
           commit_options: '--no-verify'
