@@ -1,0 +1,211 @@
+# Copyright (C) 2021-present by FridaySoftware@Github, < https://github.com/FridaySoftware >.
+#
+# This file is part of < https://github.com/FridaySoftware/Friday > project,
+# and is released under the "GNU v3.0 License Agreement".
+# Please see < https://github.com/FridaySoftware/Friday/blob/main/LICENSE >
+#
+# All rights reserved.
+
+import re
+from Main import Friday
+from Main.core.types.client import FridayTelegramClient as Client
+from Main.core.types.message import Message
+from Main.utils.custom_filters import create, Filter
+
+
+@Friday.register_on_cmd(
+    ["addfilter", "savefilter", "filter"],
+    cmd_help={
+        "help": "Add filter(s) to the chat. Supports comma-separated bulk keywords.",
+        "example": "addfilter word1, word2, word3 <reply to message>",
+    },
+    requires_reply=True,
+    requires_input=True,
+)
+async def add_filter(c: Client, m: Message):
+    ms = await m.handle_message("PROCESSING")
+    if Friday.db is None:
+        return await ms.edit_msg("No database connected.")
+    filters_db = Friday.db.make_collection("FILTERS")
+    chat_id = m.chat.id
+    raw_input = m.user_input or ""
+    keywords = [k.strip().lower() for k in raw_input.split(",") if k.strip()]
+    if not keywords:
+        return await ms.edit_msg("No keywords specified.")
+
+    my_id_ = c.myself.id
+    if m.reply_to_message and m.reply_to_message.file:
+        if not Friday.log_chat:
+            return await ms.edit_msg("ERROR_404_NO_LOG_CHAT")
+        saved = await c.send_message(Friday.log_chat, m.reply_to_message)
+        reply_val = str(saved.id)
+    else:
+        reply_val = m.reply_to_message.text if m.reply_to_message else ""
+
+    added_count = 0
+    updated_count = 0
+    for kw in keywords:
+        res = await filters_db.find_one(
+            {"keyword": kw, "chat_id": chat_id, "client_id": my_id_}
+        )
+        if res:
+            await filters_db.update_one(
+                {"keyword": kw, "chat_id": chat_id, "client_id": my_id_},
+                {"$set": {"reply": reply_val}},
+            )
+            updated_count += 1
+        else:
+            await filters_db.insert_one(
+                {"keyword": kw, "chat_id": chat_id, "client_id": my_id_, "reply": reply_val}
+            )
+            added_count += 1
+        if hasattr(Friday.config, "FILTERS_CACHE"):
+            Friday.config.FILTERS_CACHE.setdefault(my_id_, {}).setdefault(chat_id, {})[kw] = reply_val
+
+    kw_list = ", ".join(f"<code>{k}</code>" for k in keywords)
+    if len(keywords) == 1:
+        template = Friday.get_string("FILTER_ADDED") or "Filter '{0}' added successfully."
+        await ms.edit(template.format(keywords[0]))
+    else:
+        await ms.edit(
+            f"✅ <b>Bulk Filters Saved:</b> {kw_list}\n"
+            f"• <b>Added:</b> {added_count} | <b>Updated:</b> {updated_count}",
+            parse_mode="html",
+        )
+
+
+@Friday.register_on_cmd(
+    ["delfilter", "remfilter"],
+    cmd_help={
+        "help": "Remove filter(s) from the chat. Supports comma-separated bulk keywords.",
+        "example": "delfilter word1, word2, word3",
+    },
+    requires_input=True,
+)
+async def remove_filter(c: Client, m: Message):
+    ms = await m.handle_message("PROCESSING")
+    if Friday.db is None:
+        return await ms.edit_msg("No database connected.")
+    filters_db = Friday.db.make_collection("FILTERS")
+    chat_id = m.chat.id
+    raw_input = m.user_input or ""
+    keywords = [k.strip().lower() for k in raw_input.split(",") if k.strip()]
+    if not keywords:
+        return await ms.edit_msg("No keywords specified.")
+
+    my_id_ = c.myself.id
+    removed = []
+    not_found = []
+    for kw in keywords:
+        res = await filters_db.find_one_and_delete(
+            {"keyword": kw, "chat_id": chat_id, "client_id": my_id_}
+        )
+        if res:
+            removed.append(kw)
+            if hasattr(Friday.config, "FILTERS_CACHE"):
+                Friday.config.FILTERS_CACHE.get(my_id_, {}).get(chat_id, {}).pop(kw, None)
+        else:
+            not_found.append(kw)
+
+    if len(keywords) == 1:
+        if removed:
+            return await ms.edit_msg("FILTER_REMOVED", string_args=(removed[0],))
+        return await ms.edit_msg("FILTER_DONT_EXIST", string_args=(getattr(m.chat, "title", str(chat_id)),))
+
+    res_parts = []
+    if removed:
+        res_parts.append(f"🗑️ <b>Removed {len(removed)} filter(s):</b> {', '.join(f'<code>{r}</code>' for r in removed)}")
+    if not_found:
+        res_parts.append(f"ℹ️ <b>Not found ({len(not_found)}):</b> {', '.join(f'<code>{n}</code>' for n in not_found)}")
+    await ms.edit("\n".join(res_parts) if res_parts else "No filters processed.", parse_mode="html")
+
+
+@Friday.register_on_cmd(
+    ["listfilters", "filters"],
+    cmd_help={
+        "help": "List all filters in the chat.",
+        "example": "listfilters",
+    },
+)
+async def listfilters(c: Client, m: Message):
+    ms = await m.handle_message("PROCESSING")
+    if Friday.db is None:
+        return await ms.edit_msg("No database connected.")
+    filters_db = Friday.db.make_collection("FILTERS")
+    chat_id = m.chat.id
+    my_id_ = c.myself.id
+    res = [item async for item in filters_db.find({"chat_id": chat_id, "client_id": my_id_})]
+    if not res:
+        return await ms.edit_msg("FILTER_LIST_EMPTY", string_args=(chat_id,))
+    to_reply = "".join(f"• {i['keyword']}\n" for i in res) + f"\n<b>TOTAL FILTERS: {len(res)}</b>"
+    await ms.edit_msg("FILTER_LIST", string_args=(chat_id, to_reply))
+
+
+@Friday.register_on_cmd(
+    ["delfilters", "delallfilters"],
+    cmd_help={
+        "help": "Remove all filters from the chat.",
+        "example": "delfilters",
+    },
+)
+async def delfilters(c: Client, m: Message):
+    ms = await m.handle_message("PROCESSING")
+    if Friday.db is None:
+        return await ms.edit_msg("No database connected.")
+    filters_db = Friday.db.make_collection("FILTERS")
+    chat_id = m.chat.id
+    my_id_ = c.myself.id
+    deleted = await filters_db.delete_many({"chat_id": chat_id, "client_id": my_id_})
+    if deleted.deleted_count > 0:
+        if hasattr(Friday.config, "FILTERS_CACHE"):
+            Friday.config.FILTERS_CACHE.get(my_id_, {}).pop(chat_id, None)
+        await ms.edit_msg("FILTER_DELETED_ALL", string_args=(chat_id,))
+    else:
+        await ms.edit_msg("FILTER_DONT_EXIST", string_args=(getattr(m.chat, "title", str(chat_id)),))
+
+
+async def filter_check(c: Client, m: Message) -> bool:
+    if not m.text:
+        return False
+    if m.out and not getattr(Friday, "self_test_mode", False):
+        return False
+    if m.text.startswith(getattr(Friday, "user_command_handler", ".")):
+        return False
+    my_id = getattr(c.myself, "id", None)
+    if not my_id:
+        return False
+    chat_id = m.chat_id or (getattr(m.chat, "id", None))
+
+    cached = getattr(Friday.config, "FILTERS_CACHE", {}).get(my_id, {}).get(chat_id)
+    if cached is not None:
+        return m.text.lower() in cached
+
+    if Friday.db is None:
+        return False
+    filters_db = Friday.db.make_collection("FILTERS")
+    doc = await filters_db.find_one({"keyword": m.text.lower(), "chat_id": chat_id, "client_id": my_id})
+    return bool(doc)
+
+
+@Friday.on_message(create(filter_check))
+async def filter_trigger_handler(c: Client, m: Message):
+    my_id = c.myself.id
+    chat_id = m.chat_id or (getattr(m.chat, "id", None))
+    text_l = m.text.lower()
+    reply_val = None
+
+    cached = getattr(Friday.config, "FILTERS_CACHE", {}).get(my_id, {}).get(chat_id)
+    if cached is not None and text_l in cached:
+        reply_val = cached[text_l]
+    elif Friday.db is not None:
+        filters_db = Friday.db.make_collection("FILTERS")
+        doc = await filters_db.find_one({"keyword": text_l, "chat_id": chat_id, "client_id": my_id})
+        if doc:
+            reply_val = doc.get("reply")
+
+    if reply_val:
+        if str(reply_val).isdigit() and Friday.log_chat:
+            chat_target = await m.get_input_chat() if hasattr(m, "get_input_chat") else chat_id
+            await c.send_message(chat_target, await c.get_messages(Friday.log_chat, ids=int(reply_val)), reply_to=m.id)
+        else:
+            await m.reply(str(reply_val))

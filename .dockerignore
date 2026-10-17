@@ -1,0 +1,14 @@
+.git
+.venv
+venv
+__pycache__
+*.py[cod]
+*.session
+*.session-journal
+.env
+*.env
+local_db.json
+friday.log
+cache
+dist
+build
