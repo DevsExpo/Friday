@@ -327,6 +327,11 @@ class Message(TelethonMessage):
         return res
 
     @property
+    def caption(self) -> Optional[str]:
+        """Pyrogram compatibility property for media caption or message text."""
+        return getattr(self, "text", None) or getattr(self, "raw_text", None) or getattr(self, "message", None) or None
+
+    @property
     def command_(self) -> Optional[str]:
         text = self.text or getattr(self, "raw_text", None) or getattr(self, "message", None) or ""
         if not text:
@@ -754,7 +759,7 @@ for _cls in (TelethonMessage, CustomMessage):
         "user_input", "raw_user_input", "command_", "from_user", "chat",
         "new_chat_members", "get_user", "extract_time", "copy", "strip_args",
         "chat_id", "sender_id", "reply_to_message", "get_reply_message", "reply_to_top_id", "reply_to_msg_id",
-        "is_private", "is_group", "is_channel",
+        "is_private", "is_group", "is_channel", "caption",
     ):
         _val = getattr(Message, _name, None)
         if _val is not None and not hasattr(_cls, _name):

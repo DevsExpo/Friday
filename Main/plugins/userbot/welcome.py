@@ -122,7 +122,7 @@ async def welcome_users(c: Client, m: Message):
     )
     welcome_message = await c.get_messages(Friday.log_chat, welcome_data["msg_id"])
     if await is_media(welcome_message):
-        text = welcome_message.caption or ""
+        text = getattr(welcome_message, "caption", None) or getattr(welcome_message, "text", "") or ""
         media = True
     else:
         text = welcome_message.text or ""

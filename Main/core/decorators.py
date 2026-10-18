@@ -21,8 +21,13 @@ logger = logging.getLogger("friday.decorators")
 
 
 def inline_check(func: Callable) -> Callable:
+    """Auto-enable inline mode in BotFather if it's disabled, then retry."""
+
     @wraps(func)
     async def wrapper(c: Any, m: Any, *args, **kwargs) -> Any:
+        if getattr(wrapper, "_retried", False):
+            # Already retried once this invocation — run unconditionally to avoid loops.
+            return await func(c, m, *args, **kwargs)
         try:
             return await func(c, m, *args, **kwargs)
         except (errors.ChatSendInlineForbiddenError, errors.BotInlineDisabledError):
@@ -32,8 +37,12 @@ def inline_check(func: Callable) -> Callable:
             if status:
                 with contextlib.suppress(Exception):
                     await status.delete()
-            return await func(c, m, *args, **kwargs)
+            wrapper._retried = True
+            result = await func(c, m, *args, **kwargs)
+            wrapper._retried = False
+            return result
 
+    wrapper._retried = False
     return wrapper
 
 
@@ -72,8 +81,10 @@ def iuser_check(func: Callable) -> Callable:
 
     @wraps(func)
     async def wrapper(client: Any, update: Any, *args, **kwargs) -> Any:
-        import Main
-        users = Main.Friday.auth_users
+        # Lazy import avoids circular-import issues while keeping the reference
+        # cheap after the first call (module is cached in sys.modules).
+        import Main as _main_module
+        users = _main_module.Friday.auth_users
         sender_id = getattr(update, "sender_id", None)
         if sender_id is None and hasattr(update, "from_user") and update.from_user:
             sender_id = getattr(update.from_user, "id", None)

@@ -9,13 +9,22 @@
 import re
 import time
 import uuid
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 from Main import Friday
 from Main.core.decorators import log_errors
 from Main.utils.custom_filters import filters
 from Main.utils.suppress import suppress_error
-from Main.plugins.userbot.channel_utils import digit_wrap
 from telethon import custom
+
+
+def _parse_target_user(val: Any) -> Union[int, str]:
+    if isinstance(val, int):
+        return val
+    s = str(val).strip()
+    if s.isdigit() or (s.startswith("-") and s[1:].isdigit()):
+        return int(s)
+    return s
+
 
 # In-memory fast cache (backed by database)
 MSGS_DICT: Dict[str, Dict[str, Any]] = {}
@@ -34,7 +43,7 @@ async def whisper(c, iq):
 
     _id = str(uuid.uuid4().hex[:16])
     user, msg = text.split(",", 1)
-    user = digit_wrap(user.strip())
+    user = _parse_target_user(user.strip())
     user_trail = user
     if isinstance(user, int):
         user_trail = f"[User](tg://user?id={user})"
@@ -107,7 +116,7 @@ async def whisper_callback(c, cq):
                 await Friday.db["WHISPERS"].delete_one({"_id": _id})
         return await cq.answer("⏳ This whisper has expired (max 1 day TTL).", alert=True)
 
-    user_id_or_username = digit_wrap(msg_dict.get("user"))
+    user_id_or_username = _parse_target_user(msg_dict.get("user"))
     MSG = msg_dict.get("msg")
     sender_id = cq.sender_id
     creator_id = msg_dict.get("sender_id")
@@ -134,18 +143,14 @@ async def whisper_callback(c, cq):
     # If sender/owner previews it before the recipient, don't burn it yet
     if is_sender_or_owner and not is_recipient:
         return await cq.answer(f"[Whisper Sent by You]\n{MSG}", alert=True)
-
-    # Intended recipient opened the whisper!
-    # 1. Show message to the recipient
+        
     await cq.answer(MSG, alert=True)
 
-    # 2. Burn after reading: wipe from memory cache & database
     MSGS_DICT.pop(_id, None)
     if Friday.db is not None:
         with suppress_error(msg="Deleting burned whisper from DB"):
             await Friday.db["WHISPERS"].delete_one({"_id": _id})
 
-    # 3. Update the inline message to show the secret is done and destroyed
     with suppress_error(msg="Editing destroyed whisper message"):
         recipient_tag = f"@{cq.sender.username}" if hasattr(cq, "sender") and getattr(cq.sender, "username", None) else "The recipient"
         await cq.edit(

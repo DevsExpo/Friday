@@ -159,6 +159,13 @@ class DeleteResult:
         self.deleted_count = deleted_count
 
 
+class UpdateResult:
+    def __init__(self, matched_count: int = 0, modified_count: int = 0) -> None:
+        self.matched_count = matched_count
+        self.modified_count = modified_count
+        self.acknowledged = True
+
+
 def _apply_cursor_transforms(
     docs: List[Dict[str, Any]],
     sort_key: Optional[Any],
@@ -229,6 +236,27 @@ class LocalCollection:
             PyMongoInstructionParser.apply_update(new_doc, update)
             self._col().append(new_doc)
             self._db.save()
+
+    async def update_many(
+        self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False
+    ) -> UpdateResult:
+        matched = 0
+        for doc in self._col():
+            if PyMongoInstructionParser.match_document(doc, query):
+                matched += 1
+                PyMongoInstructionParser.apply_update(doc, update)
+        if matched > 0:
+            self._db.save()
+            return UpdateResult(matched, matched)
+        if upsert:
+            new_doc = dict(query)
+            if "_id" not in new_doc:
+                new_doc["_id"] = uuid.uuid4().hex
+            PyMongoInstructionParser.apply_update(new_doc, update)
+            self._col().append(new_doc)
+            self._db.save()
+            return UpdateResult(0, 1)
+        return UpdateResult(0, 0)
 
     async def find_one_and_update(
         self,
@@ -494,6 +522,36 @@ class SQLCollection:
                 new_doc["_id"] = uuid.uuid4().hex
             updated = PyMongoInstructionParser.apply_update(new_doc, update)
             await self.insert_one(updated)
+
+    async def update_many(
+        self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False
+    ) -> UpdateResult:
+        await self._ensure_table()
+        cursor = self.find(query)
+        matching = await cursor.to_list()
+        if matching:
+            for doc in matching:
+                doc_id = str(doc.get("_id"))
+                updated = PyMongoInstructionParser.apply_update(doc, update)
+                if self._db.dialect in ("postgresql", "postgres"):
+                    await self._db._execute(
+                        f"UPDATE {self._table} SET data = $1 WHERE _id = $2",
+                        (json.dumps(updated), doc_id),
+                    )
+                else:
+                    await self._db._execute(
+                        f"UPDATE {self._table} SET data = ? WHERE _id = ?",
+                        (json.dumps(updated), doc_id),
+                    )
+            return UpdateResult(len(matching), len(matching))
+        elif upsert:
+            new_doc = dict(query)
+            if "_id" not in new_doc:
+                new_doc["_id"] = uuid.uuid4().hex
+            updated = PyMongoInstructionParser.apply_update(new_doc, update)
+            await self.insert_one(updated)
+            return UpdateResult(0, 1)
+        return UpdateResult(0, 0)
 
     async def find_one_and_update(
         self,
@@ -763,6 +821,26 @@ class RedisCollection:
                 new_doc["_id"] = uuid.uuid4().hex
             updated = PyMongoInstructionParser.apply_update(new_doc, update)
             await self.insert_one(updated)
+
+    async def update_many(
+        self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False
+    ) -> UpdateResult:
+        cursor = self.find(query)
+        matching = await cursor.to_list()
+        if matching:
+            for doc in matching:
+                doc_id = str(doc.get("_id"))
+                updated = PyMongoInstructionParser.apply_update(doc, update)
+                await self._db._client.hset(self._key, doc_id, json.dumps(updated))
+            return UpdateResult(len(matching), len(matching))
+        elif upsert:
+            new_doc = dict(query)
+            if "_id" not in new_doc:
+                new_doc["_id"] = uuid.uuid4().hex
+            updated = PyMongoInstructionParser.apply_update(new_doc, update)
+            await self.insert_one(updated)
+            return UpdateResult(0, 1)
+        return UpdateResult(0, 0)
 
     async def find_one_and_update(
         self,

@@ -6,12 +6,13 @@
 #
 # All rights reserved.
 
+import contextlib
 import time
 import psutil
 from telethon import custom
 from Main import Friday
 from Main.utils.custom_filters import filters
-from Main.utils.inline_helper import is_owner, is_owner_cb
+from Main.utils.inline_helper import is_owner, is_owner_cb, send_inline_widget
 
 
 def _get_readable_time(seconds: int) -> str:
@@ -111,6 +112,11 @@ async def _render_main_panel():
     return text, buttons
 
 
+async def _safe_edit(target, text: str, buttons=None):
+    with contextlib.suppress(Exception):
+        await target.edit(text, buttons=buttons, parse_mode="html")
+
+
 # ==========================================
 # Assistant Bot Command: /panel or /settings
 # ==========================================
@@ -140,20 +146,14 @@ async def userbot_panel_cmd(c, m):
     msg = await m.handle_message("PROCESSING")
     text, buttons = await _render_main_panel()
     # Try inline widget via assistant bot if available
-    try:
-        from Main.utils.inline_helper import send_inline_widget
+    with contextlib.suppress(Exception):
         sent = await send_inline_widget(c, m, "panel")
         if sent:
             await msg.delete_if_self()
             return
-    except Exception:
-        pass
 
     # Direct edit/reply if assistant bot inline is disabled
-    try:
-        await msg.edit(text, buttons=buttons, parse_mode="html")
-    except Exception:
-        await msg.edit(text, parse_mode="html")
+    await _safe_edit(msg, text, buttons=buttons)
 
 
 # ==========================================
@@ -171,16 +171,13 @@ async def on_panel_callback(c, cq):
         try:
             await cq.delete()
         except Exception:
-            await cq.edit("<i>Control panel closed.</i>", buttons=None, parse_mode="html")
+            await _safe_edit(cq, "<i>Control panel closed.</i>", buttons=None)
         return
 
     if data == "panel_refresh":
         await cq.answer("🔄 Updating stats...")
         text, buttons = await _render_main_panel()
-        try:
-            await cq.edit(text, buttons=buttons, parse_mode="html")
-        except Exception:
-            pass
+        await _safe_edit(cq, text, buttons=buttons)
         return
 
     if data == "panel_toggle_pm":
@@ -190,10 +187,7 @@ async def on_panel_callback(c, cq):
         status_txt = "ENABLED" if new_val else "DISABLED"
         await cq.answer(f"🛡️ PM Security is now {status_txt}!", alert=True)
         text, buttons = await _render_main_panel()
-        try:
-            await cq.edit(text, buttons=buttons, parse_mode="html")
-        except Exception:
-            pass
+        await _safe_edit(cq, text, buttons=buttons)
         return
 
     if data == "panel_toggle_pbar":
@@ -203,10 +197,7 @@ async def on_panel_callback(c, cq):
         status_txt = "ENABLED (Live ASCII Bar)" if new_val else "DISABLED (Clean Mode, No FloodWaits)"
         await cq.answer(f"📊 Upload Progress Bar is now {status_txt}!", alert=True)
         text, buttons = await _render_main_panel()
-        try:
-            await cq.edit(text, buttons=buttons, parse_mode="html")
-        except Exception:
-            pass
+        await _safe_edit(cq, text, buttons=buttons)
         return
 
     if data == "panel_ping":
@@ -263,10 +254,7 @@ async def on_panel_callback(c, cq):
                 custom.Button.inline("🏠 Main Menu", b"bot_start_menu"),
             ])
 
-        try:
-            await cq.edit(text, buttons=buttons, parse_mode="html")
-        except Exception:
-            pass
+        await _safe_edit(cq, text, buttons=buttons)
         return
 
     if data.startswith("panel_sess_info:"):
@@ -300,10 +288,7 @@ async def on_panel_callback(c, cq):
                 custom.Button.inline("🏠 Main Menu", b"bot_start_menu"),
             ],
         ]
-        try:
-            await cq.edit(text, buttons=buttons, parse_mode="html")
-        except Exception:
-            pass
+        await _safe_edit(cq, text, buttons=buttons)
         return
 
     if data.startswith("panel_logout_prompt:"):
@@ -328,10 +313,7 @@ async def on_panel_callback(c, cq):
                 custom.Button.inline("❌ Cancel", b"panel_sessions"),
             ]
         ]
-        try:
-            await cq.edit(text, buttons=buttons, parse_mode="html")
-        except Exception:
-            pass
+        await _safe_edit(cq, text, buttons=buttons)
         return
 
     if data.startswith("panel_logout_confirm:"):
@@ -354,17 +336,13 @@ async def on_panel_callback(c, cq):
             [custom.Button.inline("👥 View Remaining Accounts", b"panel_sessions")],
             [custom.Button.inline("🔙 Back to Main Panel", b"panel_refresh")],
         ]
-        try:
-            await cq.edit(text, buttons=buttons, parse_mode="html")
-        except Exception:
-            pass
+        await _safe_edit(cq, text, buttons=buttons)
         return
 
     if data == "panel_restart":
         await cq.answer("🔄 Restarting Friday instance...", alert=True)
-        try:
-            await cq.edit("🔄 <i>Restarting Friday instance now...</i>", buttons=None, parse_mode="html")
-        except Exception:
-            pass
-        Friday.restart()
+        await _safe_edit(cq, "🔄 <i>Restarting Friday instance now...</i>", buttons=None)
+        if hasattr(Friday, "reboot"):
+            await Friday.reboot(soft=False, last_msg=cq)
         return
+

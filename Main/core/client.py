@@ -56,6 +56,15 @@ from ..utils.command import resolve_command
 
 logger = logging.getLogger("Friday")
 
+# Commands that are restricted to the owner only and blocked from sudo users.
+# Centralised here to avoid copy-paste drift across the codebase.
+_OWNER_ONLY_CMDS: frozenset = frozenset({
+    "subcategories",
+    "eval", "exec", "bash", "sh", "terminal", "py", "install",
+    "addsudo", "rmsudo", "dpfs", "rmdfs",
+    "restart", "reload", "shutdown", "update", "add_session", "session", "token",
+})
+
 
 class BotWrapper:
     """Wrapper around assistant bot client providing decorator event handling."""
@@ -338,7 +347,7 @@ class FridayClient:
     def register_on_cmd(
         self,
         cmd: Union[str, List[str]],
-        cmd_help: dict = {},
+        cmd_help: Optional[Dict[str, Any]] = None,
         pm_only: bool = False,
         group_only: bool = False,
         channel_only: bool = False,
@@ -352,12 +361,13 @@ class FridayClient:
         if isinstance(cmd, str):
             cmd = [cmd]
         self.cmd_list_s.extend(cmd)
+        _help_map: Dict[str, Any] = cmd_help if cmd_help is not None else {}
         previous_stack_frame = inspect.stack()[1]
         file_name = os.path.basename(previous_stack_frame.filename.replace(".py", ""))
         self.add_help_to_command_list(
             commands=cmd,
             file_name=file_name,
-            help_map=cmd_help,
+            help_map=_help_map,
             requires_input=requires_input,
             requires_reply=requires_reply,
             group_only=group_only,
@@ -469,13 +479,7 @@ class FridayClient:
                             disabled = getattr(self, "disabled_sudo_plugin_list", []) or []
                             if isinstance(disabled, (list, tuple, set)) and cmd_name in {str(x).lower() for x in disabled}:
                                 return
-                            owner_only_cmds = {
-                                                                "subcategories",
-                                                                                                "eval", "exec", "bash", "sh", "terminal", "py", "install",
-                                "addsudo", "rmsudo", "dpfs", "rmdfs",
-                                "restart", "reload", "shutdown", "update", "add_session", "session", "token",
-                            }
-                            if cmd_name in owner_only_cmds or handler_entry.get("file_name") in owner_only_cmds:
+                            if cmd_name in _OWNER_ONLY_CMDS or handler_entry.get("file_name") in _OWNER_ONLY_CMDS:
                                 return
                     else:
                         is_self = getattr(event, "out", False)
@@ -489,13 +493,7 @@ class FridayClient:
                         elif prefix == sudo_p:
                             if not sender_id or sender_id not in sudo_users:
                                 return
-                            owner_only_cmds = {
-                                                                "subcategories",
-                                                                                                "eval", "exec", "bash", "sh", "terminal", "py", "install",
-                                "addsudo", "rmsudo", "dpfs", "rmdfs",
-                                "restart", "reload", "shutdown", "update", "add_session", "session", "token",
-                            }
-                            if cmd_name in owner_only_cmds or handler_entry.get("file_name") in owner_only_cmds:
+                            if cmd_name in _OWNER_ONLY_CMDS or handler_entry.get("file_name") in _OWNER_ONLY_CMDS:
                                 return
                             disabled = getattr(self, "disabled_sudo_plugin_list", []) or []
                             if isinstance(disabled, (list, tuple, set)) and cmd_name in {str(x).lower() for x in disabled}:
@@ -974,12 +972,6 @@ class FridayClient:
 
     def prepare_help(self) -> None:
         self._command_help_message_data.clear()
-        owner_only_cmds = {
-                        "subcategories",
-                                    "eval", "exec", "bash", "sh", "terminal", "py", "install",
-            "addsudo", "rmsudo", "dpfs", "rmdfs",
-            "restart", "reload", "shutdown", "update", "add_session", "session", "token",
-        }
         disabled_sudo = set(str(x).lower() for x in (getattr(self, "disabled_sudo_plugin_list", []) or []))
 
         for plugin_name, commands_data in self.cmd_list.items():
@@ -999,7 +991,7 @@ class FridayClient:
 
                 bot_status = "👤 Userbot Only" if bot_unsupported else "🤖 Bot & Userbot"
 
-                is_owner_only = any(c.lower() in owner_only_cmds for c in cmds) or (p_name in owner_only_cmds)
+                is_owner_only = any(c.lower() in _OWNER_ONLY_CMDS for c in cmds) or (p_name in _OWNER_ONLY_CMDS)
                 is_sudo_disabled = any(c.lower() in disabled_sudo for c in cmds) or (p_name in disabled_sudo)
                 if is_owner_only:
                     sudo_status = "👑 Owner Only (Sudo Blocked)"

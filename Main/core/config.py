@@ -309,6 +309,7 @@ class Config(BaseConfig):
         return attr_val
 
     def get_env_(self, env_key: str, as_list: bool) -> Any:
+        """Read a raw os.environ value, splitting on '|' when as_list=True."""
         env_ = os.getenv(env_key)
         if env_ and as_list:
             return list(env_.split("|"))
@@ -378,7 +379,7 @@ class Config(BaseConfig):
             return
         if isinstance(update, dict):
             await self.env_col.find_one_and_update(
-                {"_id": "SUDO_USERS"}, update, upsert=upsert
+                {"_id": env_name}, update, upsert=upsert
             )
         else:
             await self.env_col.find_one_and_update(
@@ -509,5 +510,3 @@ class Config(BaseConfig):
 
     async def set_progress_bar_sts(self, enable: bool) -> None:
         await self.set_env("USE_PROGRESS_BAR", "true" if enable else "false")
-
-
