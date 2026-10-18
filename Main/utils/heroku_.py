@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -33,10 +33,6 @@ async def prepare_heroku_url():
         None,
     )
     if not heroku_app:
-        logging.info(
-            "Looks like the api key is correct but, heroku app name isn't in the list of apps."
-        )
+        logging.info("Looks like the api key is correct but, heroku app name isn't in the list of apps.")
         return None
-    return heroku_app.git_url.replace(
-        "https://", f"https://api:{config.HEROKU_API_KEY}@"
-    )
+    return heroku_app.git_url.replace("https://", f"https://api:{config.HEROKU_API_KEY}@")

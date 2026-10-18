@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -41,7 +41,9 @@ async def paste_bot_cmd_handler(_, m):
     else:
         text = m.raw_user_input
     if not text:
-        return await m.reply(Friday.get_string("PASTE_SOURCE_NOT_PROVIDED") or "Please provide text or reply to a message to paste.")
+        return await m.reply(
+            Friday.get_string("PASTE_SOURCE_NOT_PROVIDED") or "Please provide text or reply to a message to paste."
+        )
     service, link = await Paste(text, author=_get_author_name()).paste()
     template = Friday.get_string("PASTE_TEXT") or "Pasted to {1}: {0}"
     await m.reply(template.format(link, service), link_preview=False)
@@ -69,7 +71,9 @@ async def paste_cb_handler(_, cb):
     await cb.edit(template.format(link, service), link_preview=False)
 
 
-@Friday.bot.on_inline_query(filters.regex(r"(paste_url:((?:(?:https?://)?[\w-]+(?:\.[\w-]+)+\.?(?::\d+)?(?:/\S*)?))|paste_menu:(\w+))"))
+@Friday.bot.on_inline_query(
+    filters.regex(r"(paste_url:((?:(?:https?://)?[\w-]+(?:\.[\w-]+)+\.?(?::\d+)?(?:/\S*)?))|paste_menu:(\w+))")
+)
 @log_errors
 @iuser_check
 async def paste_inline_handler(_, iq):

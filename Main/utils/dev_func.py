@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -24,14 +24,14 @@ pp = pprint
 
 async def execute_py(c: Client, code: str, m: Message):
     namespace = {}
-    exec(
+    exec(  # nosec B102
         "async def __exec_py(c, m):"
         + "\n rm = getattr(m, 'reply_to_message', None)"
         + "\n message = m"
         + "\n client = Client = c"
         + "\n chat = getattr(m, 'chat', None)"
         + "\n user = getattr(m, 'from_user', None)"
-        + "".join(f"\n {l}" for l in code.split("\n")),
+        + "".join(f"\n {line}" for line in code.split("\n")),
         globals(),
         namespace,
     )

@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -22,7 +22,7 @@ def concatenate(i: any, max_value: any, to_add: str, from_end=True) -> str:
 
 def monkeypatch(obj):
     def wrapper(sub):
-        for (func_name, func_) in sub.__dict__.items():
+        for func_name, func_ in sub.__dict__.items():
             if func_name[:2] != "__":
                 setattr(obj, func_name, func_)
         return sub

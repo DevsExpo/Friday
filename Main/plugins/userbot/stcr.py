@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -13,12 +13,13 @@ import shutil
 import asyncio
 from PIL import Image
 from Main import Friday
-from typing import Union, Optional, Tuple
+from typing import Tuple
 from telethon import functions, types, errors, utils
 from Main.core.types import FridayTelegramClient as Client
 from Main.core.types.message import Message
 from Main.utils.file_helpers import run_in_exc
 from Main.utils.suppress import suppress_error
+from Main.utils.ui_tokens import STATUS
 
 TEMP_DIR = os.path.abspath("./temp")
 os.makedirs(TEMP_DIR, exist_ok=True)
@@ -30,16 +31,27 @@ def convertor_(input_file: str, w: int, h: int) -> str:
     if not shutil.which("ffmpeg"):
         raise RuntimeError("FFmpeg is not installed on this system.")
     import subprocess
+
     out_file = f"{os.path.splitext(input_file)[0]}.webm"
     cmd = [
-        "ffmpeg", "-y",
-        "-ss", "0:00:00", "-to", "0:00:03",
-        "-i", input_file,
-        "-vf", f"scale={h}:{w}",
-        "-c:v", "libvpx-vp9",
-        "-pix_fmt", "yuv420p",
-        "-crf", "28",
-        "-loglevel", "error",
+        "ffmpeg",
+        "-y",
+        "-ss",
+        "0:00:00",
+        "-to",
+        "0:00:03",
+        "-i",
+        input_file,
+        "-vf",
+        f"scale={h}:{w}",
+        "-c:v",
+        "libvpx-vp9",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        "28",
+        "-loglevel",
+        "error",
         out_file,
     ]
     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -58,6 +70,7 @@ def decide_file_dem(input_file: str) -> Tuple[int, int]:
     try:
         from hachoir.parser import createParser
         from hachoir.metadata import extractMetadata
+
         metadata = extractMetadata(createParser(input_file))
         if metadata and metadata.has("width") and metadata.has("height"):
             if metadata.get("width") > metadata.get("height"):
@@ -117,7 +130,7 @@ cached_peer = {}
     requires_reply=True,
     cmd_help={
         "help": "Kang any sticker (static, animated, or video) or photo into your pack!",
-        "example": "kang 😁",
+        "example": f"kang {STATUS.GRIN}",
         "user_args": [
             {"arg": "pack", "help": "Custom pack name volume.", "requires_input": True},
         ],
@@ -126,7 +139,9 @@ cached_peer = {}
 async def kang_fun(c: Client, m: Message):
     msg = await m.handle_message("PROCESSING")
     if not Friday.bot or not getattr(Friday, "bot_info", None):
-        return await msg.edit_msg("❌ Assistant bot is not active. Please set <code>BOT_TOKEN</code> to use kang.")
+        return await msg.edit_msg(
+            f"{STATUS.ERROR} Assistant bot is not active. Please set <code>BOT_TOKEN</code> to use kang."
+        )
 
     user_id = m.sender_id or (getattr(m.from_user, "id", None) if m.from_user else getattr(c.myself, "id", 0))
     bot_username = getattr(Friday.bot_info, "username", "AssistantBot")
@@ -143,9 +158,7 @@ async def kang_fun(c: Client, m: Message):
                 await asyncio.sleep(1)
                 peer_ = await Friday.bot.resolve_peer(user_id)
             except Exception:
-                return await msg.edit_msg(
-                    "START_YOUR_ASSISTANT", string_args=(bot_username)
-                )
+                return await msg.edit_msg("START_YOUR_ASSISTANT", string_args=(bot_username))
         cached_peer[user_id] = peer_
 
     rm = m.reply_to_message or (await m.get_reply_message() if hasattr(m, "get_reply_message") else None)
@@ -153,15 +166,12 @@ async def kang_fun(c: Client, m: Message):
         return await msg.edit_msg("INVALID_REPLY")
 
     user_input = m.user_input.strip() if m.user_input else ""
-    emoji = user_input or "😁"
+    emoji = user_input or STATUS.GRIN
 
     # Identify media type
     doc = getattr(rm.media, "document", None) or getattr(rm, "document", None)
     is_sticker = bool(getattr(rm, "sticker", None)) or (
-        bool(doc) and any(
-            isinstance(attr, types.DocumentAttributeSticker)
-            for attr in getattr(doc, "attributes", [])
-        )
+        bool(doc) and any(isinstance(attr, types.DocumentAttributeSticker) for attr in getattr(doc, "attributes", []))
     )
 
     # Auto-extract sticker emoji if not manually specified
@@ -185,9 +195,8 @@ async def kang_fun(c: Client, m: Message):
             )
 
         # CASE 2: Replied message is a PHOTO or static IMAGE DOCUMENT
-        elif (
-            rm.photo
-            or (rm.document and getattr(rm, "file", None) and getattr(rm.file, "mime_type", "").startswith("image/"))
+        elif rm.photo or (
+            rm.document and getattr(rm, "file", None) and getattr(rm.file, "mime_type", "").startswith("image/")
         ):
             temp_dl = os.path.join(TEMP_DIR, f"raw_photo_{int(time.time() * 1000)}.jpg")
             photo_path = await c.download_media(rm, file=temp_dl)
@@ -199,10 +208,12 @@ async def kang_fun(c: Client, m: Message):
             file_ = await Friday.bot.upload_doc(resized, peer_)
 
         # CASE 3: Replied message is a raw non-sticker VIDEO or GIF
-        elif rm.video or (rm.document and getattr(rm, "file", None) and getattr(rm.file, "mime_type", "").startswith("video/")):
+        elif rm.video or (
+            rm.document and getattr(rm, "file", None) and getattr(rm.file, "mime_type", "").startswith("video/")
+        ):
             if not shutil.which("ffmpeg"):
                 return await msg.edit_msg(
-                    "❌ <b>FFmpeg is required</b> to convert raw videos/GIFs into video stickers.\n\n"
+                    f"{STATUS.ERROR} <b>FFmpeg is required</b> to convert raw videos/GIFs into video stickers.\n\n"
                     "<i>Note: You can already kang any existing sticker (animated, video, or static) directly without FFmpeg!</i>"
                 )
             temp_vid = os.path.join(TEMP_DIR, f"raw_vid_{int(time.time() * 1000)}.mp4")
@@ -221,7 +232,9 @@ async def kang_fun(c: Client, m: Message):
                 file_reference=doc.file_reference,
             )
         else:
-            return await msg.edit_msg("❌ <b>Unsupported media.</b> Please reply to a sticker, photo, image, or video.")
+            return await msg.edit_msg(
+                f"{STATUS.ERROR} <b>Unsupported media.</b> Please reply to a sticker, photo, image, or video."
+            )
 
         sticker = types.InputStickerSetItem(document=file_, emoji=emoji)
 
@@ -258,9 +271,7 @@ async def kang_fun(c: Client, m: Message):
                 try:
                     await Friday.bot.invoke(
                         functions.stickers.AddStickerToSetRequest(
-                            stickerset=types.InputStickerSetShortName(
-                                short_name=stick_.set.short_name
-                            ),
+                            stickerset=types.InputStickerSetShortName(short_name=stick_.set.short_name),
                             sticker=sticker,
                         )
                     )
@@ -323,7 +334,7 @@ async def get_pack_(c: Client, m: Message):
         found_any = True
         no_of_stickers = stick_.set.count
         pack_url = f"https://t.me/addstickers/{pack_m}"
-        final_text += f"\n✪ <a href='{pack_url}'>{title}</a> [Stickers: <code>{no_of_stickers}</code>]"
+        final_text += f"\n{STATUS.STAR} <a href='{pack_url}'>{title}</a> [Stickers: <code>{no_of_stickers}</code>]"
 
     if not found_any:
         return await msg.edit_msg("NO_PACKS_FOUND")

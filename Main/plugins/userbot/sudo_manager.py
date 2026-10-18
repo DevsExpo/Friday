@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -80,9 +80,7 @@ async def remove_disabled_ps_func(c: Client, m: Message):
         input_ = [x.strip() for x in input_.split(",") if x.strip()]
     else:
         input_ = [input_]
-    Friday.disabled_sudo_plugin_list = await Friday.config.unsync_env_to_db(
-        "DISABLED_SUDO_CMD_LIST", input_
-    )
+    Friday.disabled_sudo_plugin_list = await Friday.config.unsync_env_to_db("DISABLED_SUDO_CMD_LIST", input_)
     Friday.disabled_sudo_plugin_list = [str(item).strip().lower() for item in Friday.disabled_sudo_plugin_list]
     Friday.prepare_help()
     await msg.edit_msg("UNDISABLED_SUDO_CMD", string_args=(str(input_),))
@@ -197,18 +195,19 @@ async def rm_sudo_func(c: Client, m: Message):
     },
 )
 async def list_sudo_func(c: Client, m: Message):
-    is_bot = (
-        (getattr(c, "myself", None) and getattr(c.myself, "bot", False))
-        or (getattr(Friday, "bot_info", None) and getattr(c, "myself", None) and c.myself.id == Friday.bot_info.id)
+    is_bot = (getattr(c, "myself", None) and getattr(c.myself, "bot", False)) or (
+        getattr(Friday, "bot_info", None) and getattr(c, "myself", None) and c.myself.id == Friday.bot_info.id
     )
     if is_bot:
         from Main.plugins.bot.sudo_inline import _render_sudo_menu
+
         text, buttons = await _render_sudo_menu(c)
         return await m.reply(text, buttons=buttons, parse_mode="html")
 
     if "-basic" not in m.user_args and "-text" not in m.user_args:
         try:
             from Main.utils.inline_helper import send_inline_widget
+
             if await send_inline_widget(c, m, "listsudo"):
                 return
         except Exception:

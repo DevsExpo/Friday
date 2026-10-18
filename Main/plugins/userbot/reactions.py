@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -15,6 +15,7 @@ Commands: .react, .unreact, .reacstats
 from Main import Friday
 from telethon import functions, types
 from Main.core.types import FridayTelegramClient as Client, Message
+from Main.utils.ui_tokens import STATUS, ADMIN
 
 
 @Friday.register_on_cmd(
@@ -22,9 +23,9 @@ from Main.core.types import FridayTelegramClient as Client, Message
     cmd_help={
         "help": "React to a replied message with an emoji.",
         "example": [
-            "react 👍",
-            "react 🔥",
-            "react ❤️ -big",
+            f"react {STATUS.THUMB_UP}",
+            f"react {STATUS.FIRE}",
+            f"react {STATUS.HEART} -big",
         ],
         "user_args": [
             {"arg": "big", "help": "Use a big reaction (Premium).", "requires_input": False},
@@ -37,16 +38,18 @@ async def react_to_message(c: Client, m: Message):
     if not rm:
         return await m.handle_message("INVALID_REPLY")
 
-    emoji = m.user_input.strip() if m.user_input else "👍"
+    emoji = m.user_input.strip() if m.user_input else STATUS.THUMB_UP
     add_to_recent = not (m.user_args and "big" in m.user_args)
 
     try:
-        await c(functions.messages.SendReactionRequest(
-            peer=await c.get_input_entity(m.chat_id),
-            msg_id=rm.id,
-            reaction=[types.ReactionEmoji(emoticon=emoji)],
-            add_to_recent=add_to_recent,
-        ))
+        await c(
+            functions.messages.SendReactionRequest(
+                peer=await c.get_input_entity(m.chat_id),
+                msg_id=rm.id,
+                reaction=[types.ReactionEmoji(emoticon=emoji)],
+                add_to_recent=add_to_recent,
+            )
+        )
         await m.delete_if_self()
     except Exception as e:
         await m.handle_message("REACTIONS_FAILED", string_args=(str(e),))
@@ -69,11 +72,13 @@ async def remove_reaction(c: Client, m: Message):
         return await m.handle_message("INVALID_REPLY")
 
     try:
-        await c(functions.messages.SendReactionRequest(
-            peer=await c.get_input_entity(m.chat_id),
-            msg_id=rm.id,
-            reaction=[],  # Empty list removes reactions
-        ))
+        await c(
+            functions.messages.SendReactionRequest(
+                peer=await c.get_input_entity(m.chat_id),
+                msg_id=rm.id,
+                reaction=[],  # Empty list removes reactions
+            )
+        )
         await m.delete_if_self()
     except Exception as e:
         await m.handle_message("REACTIONS_FAILED", string_args=(str(e),))
@@ -105,13 +110,13 @@ async def get_reaction_stats(c: Client, m: Message):
     if not reactions or not reactions.results:
         return await m.handle_message("REACTIONS_EMPTY")
 
-    text = "<b>📊 Reaction Stats:</b>\n\n"
+    text = f"<b>{ADMIN.METRICS} Reaction Stats:</b>\n\n"
     total = 0
     for result in reactions.results:
         r = result.reaction
         emoji = getattr(r, "emoticon", "?")
         count = result.count
-        chosen = " ✓" if result.chosen_order is not None else ""
+        chosen = f" {STATUS.CHECK}" if result.chosen_order is not None else ""
         text += f"  {emoji} — <b>{count}</b>{chosen}\n"
         total += count
     text += f"\n<b>Total:</b> {total}"

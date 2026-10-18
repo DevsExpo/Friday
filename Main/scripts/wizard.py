@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -16,14 +16,17 @@ import os
 import sys
 
 BANNER = r"""
-  ______   _       _                 
- |  ____| (_)     | |                
- | |__     _    __| |   __ _   _   _ 
- |  __|   | |  / _` |  / _` | | | | |
- | |      | | | (_| | | (_| | | |_| |
- |_|      |_|  \__,_|  \__,_|  \__, |
-                                __/ |
-                               |___/ 
+█▀▀▀▀▀▄ █▀▀▀▀▄  █▀▄ █▀▀▀▀▄  █▀▀▀▀▀▄ █▀▄ █▀▄
+▀▀▀▀▀▀▀ ▀▀▀▀▄ █ █ █ ▀▀▀▀▄ █ ▀▀▀▀███ ███ █ █
+█▀▄     █▀▄ █ █ █ █ █▀▄ █ █ █▀▄ ███ ███ █ █
+█ ▀▀█   █ █ ▀ █ █ █ █ █ █ █ ██▀▀▀██ █ █ ▀ █
+█ █▀▀   █ ▀▀▀▄▀ █ █ █ █ █ █ ███▀▄██ █ ▀▀▀ █
+█ █     █ █▀▄ █ █ █ █ █ █ █ ███ ███ ▀▀▀▀▄ █
+█ █     █ █ █ █ █ █ █ █ █ █ ███ ███ █▀▄ █ █
+█ █     █ █ █ █ █ █ █ █ █ █ ███ ███ █ █ █ █
+█ █     █ █ █ █ █ █ █ █ █ █ ███ ███ █ █ █ █
+█ █     █ █ █ █ █ █ █ █▄▀ █ ███ ███ █ █▄█ █
+▀▄█     ▀▄█ ▀▄█ ▀▄█ ▀▄▄▄▄▀  ▀▄█ ▀▄█ ▀▄▄▄▄▄█
 
     ⚡ Friday Interactive Setup Wizard ⚡
 """
@@ -156,7 +159,7 @@ SUDO_USERS=""
 LOG_CHAT_ID=
 DEBUG=false
 LOAD_XTRA_PLUGINS=true
-XTRA_PLUGINS_REPOS=https://github.com/StarkGang/XtraPlugins
+XTRA_PLUGINS_REPOS=https://github.com/DevsExpo/XtraPlugins
 """
     with open(env_path, "w", encoding="utf-8") as f:
         f.write(env_content)

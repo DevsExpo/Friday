@@ -1,15 +1,13 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
 import re
 import os
-import sys
-import psutil
 import asyncio
 import logging
 from typing import Dict, Any, Optional
@@ -17,7 +15,7 @@ from Main import Friday
 from Main.utils.suppress import suppress_error
 from Main.core.decorators import log_errors
 from Main.utils.custom_filters import filters
-from telethon import errors, functions, types, custom
+from telethon import errors, custom
 from telethon.sessions import StringSession
 from Main.core.types.client import FridayTelegramClient
 
@@ -116,6 +114,7 @@ async def persist_and_finalize_session(app, session_str: str, chat_id: int):
     if h_api_key and h_app_name:
         try:
             import heroku3
+
             h = heroku3.from_key(h_api_key)
             app_inst = h.app(h_app_name)
             curr = app_inst.config().get("SESSIONS", "")
@@ -182,10 +181,6 @@ async def persist_and_finalize_session(app, session_str: str, chat_id: int):
     await Friday.bot.send_message(chat_id, success_text, buttons=success_buttons, parse_mode="html")
 
 
-# ==========================================
-# Phone Number Input Handler
-# ==========================================
-
 @Friday.bot.on_callback_query(filters.regex(r"^session_no"))
 @log_errors
 async def add_session_cb_handler(_, cb):
@@ -195,7 +190,9 @@ async def add_session_cb_handler(_, cb):
 
     chat_id = cb.chat_id
     if chat_id in _PENDING_LOGINS or chat_id in _ACTIVE_LOGINS:
-        return await cb.answer("⚠️ Login is already in progress! Please enter your code/password or /cancel.", alert=True)
+        return await cb.answer(
+            "⚠️ Login is already in progress! Please enter your code/password or /cancel.", alert=True
+        )
 
     _PENDING_LOGINS.add(chat_id)
     await cb.answer()
@@ -234,6 +231,7 @@ async def add_session_cb_handler(_, cb):
                     if raw_text.startswith("/start"):
                         mention = getattr(resp.sender, "first_name", "User") or "User"
                         from Main.internals.get_session import get_main_start_dashboard
+
                         caption, buttons = get_main_start_dashboard(mention)
                         return await conv.send_message(caption, buttons=buttons, parse_mode="html")
                     return await conv.send_message(
@@ -313,10 +311,6 @@ async def add_session_cb_handler(_, cb):
     _ACTIVE_LOGINS[chat_id]["msg_id"] = numpad_msg.id
 
 
-# ==========================================
-# OTP Text & 2FA Password Input Handler
-# ==========================================
-
 @Friday.bot.on_message(filters.private)
 async def on_twp_text_input(client, message):
     chat_id = message.chat_id
@@ -364,10 +358,6 @@ async def on_twp_text_input(client, message):
         state["digits"] = digits[:5]
         await _submit_login_code(chat_id, message)
 
-
-# ==========================================
-# OTP NumPad Callback Handler
-# ==========================================
 
 @Friday.bot.on_callback_query(filters.regex(r"^otp_"))
 async def on_otp_numpad_callback(c, cq):

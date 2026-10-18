@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -121,25 +121,15 @@ class FileHelpers:
 
     @property
     def is_animated_sticker(self):
-        if not (
-            self.is_audio or self.is_video or self.is_photo or self.is_sticker
-        ) and self.get_ext in [".tgs"]:
+        if not (self.is_audio or self.is_video or self.is_photo or self.is_sticker) and self.get_ext in [".tgs"]:
             return True
 
     @property
     def is_sticker(self):
-        if not (self.is_audio or self.is_video or self.is_photo) and self.get_ext in [
-            ".webp"
-        ]:
+        if not (self.is_audio or self.is_video or self.is_photo) and self.get_ext in [".webp"]:
             return True
 
     @property
     def is_document(self):
-        if not (
-            self.is_audio
-            or self.is_video
-            or self.is_photo
-            or self.is_sticker
-            or self.is_animated_sticker
-        ):
+        if not (self.is_audio or self.is_video or self.is_photo or self.is_sticker or self.is_animated_sticker):
             return True

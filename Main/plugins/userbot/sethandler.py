@@ -1,14 +1,15 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
 from Main import Friday
 from Main.core.types import FridayTelegramClient as Client, Message
 from Main.core.decorators import log_errors
+from Main.utils.ui_tokens import STATUS
 
 
 @Friday.register_on_cmd(
@@ -29,7 +30,7 @@ async def set_handler_cmd(c: Client, m: Message):
     new_pfx = (m.user_input or "").strip()
     if not new_pfx or len(new_pfx) > 2 or " " in new_pfx:
         return await m.handle_message(
-            "❌ <b>Invalid prefix.</b> Choose 1 or 2 characters without spaces (e.g. <code>.</code>, <code>!</code>, <code>,</code>, <code>?</code>)."
+            f"{STATUS.ERROR} <b>Invalid prefix.</b> Choose 1 or 2 characters without spaces (e.g. <code>.</code>, <code>!</code>, <code>,</code>, <code>?</code>)."
         )
 
     old_pfx = getattr(Friday, "user_command_handler", ".") or "."
@@ -45,8 +46,8 @@ async def set_handler_cmd(c: Client, m: Message):
         Friday._build_command_help_message()
 
     return await m.handle_message(
-        f"✅ <b>Command prefix updated!</b>\n\n"
-        f"• <b>Old prefix:</b> <code>{old_pfx}</code>\n"
-        f"• <b>New prefix:</b> <code>{new_pfx}</code>\n\n"
+        f"{STATUS.SUCCESS} <b>Command prefix updated!</b>\n\n"
+        f"{STATUS.BULLET} <b>Old prefix:</b> <code>{old_pfx}</code>\n"
+        f"{STATUS.BULLET} <b>New prefix:</b> <code>{new_pfx}</code>\n\n"
         f"<i>All command examples now use:</i> <code>{new_pfx}ping</code>, <code>{new_pfx}help</code>, etc."
     )

@@ -1,9 +1,6 @@
 import pytest
-import os
-import asyncio
-from Main.core.database import MongoDB, LocalDatabase
-from Main.core.plugin_manager import PluginManager, PluginMetadata, GitHubPluginProvider
-from Main.core.types.client import FridayTelegramClient
+from Main.core.database import LocalDatabase
+from Main.core.plugin_manager import PluginManager, GitHubPluginProvider
 from Main.core.types.message import Message
 
 
@@ -51,8 +48,8 @@ async def test_localdatabase_mock_matching_mongo():
 
 def test_plugin_metadata_and_github_provider():
     """Verify PluginManager parses GitHub repos and handles plugin registry."""
-    provider = GitHubPluginProvider("https://github.com/StarkGang/Plugins")
-    assert provider.repo_url == "https://github.com/StarkGang/Plugins"
+    provider = GitHubPluginProvider("https://github.com/DevsExpo/Plugins")
+    assert provider.repo_url == "https://github.com/DevsExpo/Plugins"
     assert provider.repo_name == "Plugins"
 
     pm = PluginManager()
@@ -101,7 +98,7 @@ async def test_callback_query_regex_filter():
 
 def test_robust_html_parser():
     """Verify robust HTML parser handles non-telegram tags, unclosed tags, and spoilers."""
-    from Main.core.html_parser import parse, clean_and_normalize_html
+    from Main.core.html_parser import parse
     from telethon.tl.types import MessageEntityBold, MessageEntityItalic, MessageEntitySpoiler, MessageEntityCode
 
     # 1. Non-telegram tags should NOT be stripped (e.g. <user_id> or <pkg>)
@@ -198,6 +195,3 @@ def test_raw_telethon_message_has_friday_helpers():
     assert isinstance(enriched, Message)
     assert hasattr(enriched, "edit_msg")
     assert enriched.command_ == "ping"
-
-
-

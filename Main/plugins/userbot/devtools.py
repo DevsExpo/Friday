@@ -1,21 +1,21 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
 import os
 import aiofiles
 from Main import Friday
-from logging import info
 from Main.utils.paste import Paste
 from Main.core.types.client import FridayTelegramClient as Client
 from time import perf_counter as pc
 from Main.core.config import TGLIMITS
 from Main.core.types.message import Message
 from Main.utils.dev_func import eval_py, exec_terminal
+from Main.utils.ui_tokens import STATUS
 
 
 @Friday.register_on_cmd(
@@ -92,7 +92,9 @@ async def evaluate_command_handler(c: Client, m: Message):
         or (m.sender_id and m.sender_id == getattr(c.myself, "id", None))
     )
     if not is_owner:
-        return await m_.edit_msg("❌ <b>Security Violation:</b> <code>Only the userbot owner can evaluate code.</code>")
+        return await m_.edit_msg(
+            f"{STATUS.ERROR} <b>Security Violation:</b> <code>Only the userbot owner can evaluate code.</code>"
+        )
 
     user_args = m.user_args
     cmd = m.raw_user_input
@@ -110,16 +112,16 @@ async def evaluate_command_handler(c: Client, m: Message):
     if "s" in user_args and Friday.log_chat:
         if "p" in user_args:
             service, url = await Paste(final_output).paste()
-            msg = await c.send_message(Friday.log_chat, f"{cmd_} \n<b>Pasted to {service}:</b> {url}", parse_mode="html")
+            await c.send_message(Friday.log_chat, f"{cmd_} \n<b>Pasted to {service}:</b> {url}", parse_mode="html")
         elif "f" in user_args or len(final_output) >= TGLIMITS.MESSAGE_TEXT:
             file_path = os.path.join(temp_dir, f"out_eval_{m.id}.txt")
             async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
                 await f.write(final_output)
-            msg = await c.send_file(Friday.log_chat, file_path, caption=cmd_)
+            await c.send_file(Friday.log_chat, file_path, caption=cmd_)
             if os.path.exists(file_path):
                 os.remove(file_path)
         else:
-            msg = await c.send_message(Friday.log_chat, final_output, parse_mode="html")
+            await c.send_message(Friday.log_chat, final_output, parse_mode="html")
         return await m.edit_msg("<b>OUTPUT sent to log chat!</b>")
 
     await m_.edit_msg(
@@ -162,7 +164,9 @@ async def terminal(c: Client, m: Message):
         or (m.sender_id and m.sender_id == getattr(c.myself, "id", None))
     )
     if not is_owner:
-        return await m.handle_message("❌ <b>Security Violation:</b> <code>Only the userbot owner can execute terminal commands.</code>")
+        return await m.handle_message(
+            f"{STATUS.ERROR} <b>Security Violation:</b> <code>Only the userbot owner can execute terminal commands.</code>"
+        )
 
     user_args = m.user_args
     bash_code = m.raw_user_input
@@ -174,7 +178,7 @@ async def terminal(c: Client, m: Message):
         bash_code = (bash_code.replace("-p", "").replace("-f", "")).strip()
     success, output, return_code = await exec_terminal(bash_code)
     out_text = f"<b>Input:</b>\n<code>{bash_code}</code>"
-    out_text += f'\n\n<b>{Friday.get_string("OUTPUT") or "Output"}:</b>\n<pre>{output or Friday.get_string("NO_OUTPUT") or "No output"}</pre>\n'
+    out_text += f"\n\n<b>{Friday.get_string('OUTPUT') or 'Output'}:</b>\n<pre>{output or Friday.get_string('NO_OUTPUT') or 'No output'}</pre>\n"
     out_text += f"<b>Status:</b> <i>{'Success' if success else 'Failed'}</i> (<code>{return_code}</code>)"
     caption_ = "<b>OUTPUT OF CMD EXECUTED</b>"
 

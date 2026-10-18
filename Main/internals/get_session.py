@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -40,10 +40,6 @@ def _get_host_badge() -> str:
     return "☁️ Serverless / Cloud" if is_serverless else "💻 Local Server / VPS"
 
 
-# ==========================================
-# STEP 1: Database Setup
-# ==========================================
-
 def get_twp_step1_text() -> str:
     db_badge = _get_db_badge()
     host_badge = _get_host_badge()
@@ -75,10 +71,6 @@ def get_twp_step1_buttons() -> list:
     ]
     return btns
 
-
-# ==========================================
-# STEP 2: Account Login
-# ==========================================
 
 def get_twp_step2_text() -> str:
     db_badge = _get_db_badge()
@@ -150,6 +142,7 @@ async def bot_start_menu_cb_handler(c, cq):
     # Cancel any pending login / conversation locks
     from Main.internals.make_session import _PENDING_LOGINS
     from Main.utils.suppress import suppress_error
+
     _PENDING_LOGINS.discard(cq.chat_id)
     if hasattr(Friday.bot, "_conversations"):
         with suppress_error():
@@ -172,10 +165,6 @@ async def bot_start_menu_cb_handler(c, cq):
         await c.send_file(cq.chat_id, file, caption=caption, buttons=buttons, parse_mode="html")
 
 
-# ==========================================
-# Start Command Handler
-# ==========================================
-
 @Friday.bot.on_message(filters.command("start", "/") & filters.private)
 @log_errors
 async def start_command_handler(c, m):
@@ -186,6 +175,7 @@ async def start_command_handler(c, m):
     # Cancel any stuck logins / conversations for this user
     from Main.internals.make_session import _PENDING_LOGINS
     from Main.utils.suppress import suppress_error
+
     _PENDING_LOGINS.discard(sender_id)
     if hasattr(Friday.bot, "_conversations"):
         with suppress_error():
@@ -199,6 +189,7 @@ async def start_command_handler(c, m):
         if not sender_id or sender_id not in Friday.auth_users:
             return await m.reply("⚠️ <i>You are not authorized to use this bot.</i>", parse_mode="html")
         from Main.plugins.bot.help import get_help_menu, help_text
+
         buttons = await get_help_menu(category="all", page=0)
         return await m.reply(help_text, buttons=buttons, parse_mode="html")
 
@@ -217,7 +208,10 @@ async def start_command_handler(c, m):
 
         if Friday.training_wheels_protocol:
             if not is_twp_authorized(sender_id):
-                return await m.reply("⛔ <b>Access Denied:</b> This bot's initial setup is locked to the verified owner.", parse_mode="html")
+                return await m.reply(
+                    "⛔ <b>Access Denied:</b> This bot's initial setup is locked to the verified owner.",
+                    parse_mode="html",
+                )
 
             # Guide user through Step 1 (Database) first
             await m.reply(get_twp_step1_text(), buttons=get_twp_step1_buttons(), parse_mode="html")
@@ -227,10 +221,6 @@ async def start_command_handler(c, m):
             return await m.reply("⛔ <b>Access Denied:</b> Initial setup is locked to the owner.", parse_mode="html")
         await m.reply(get_twp_step2_text(), buttons=get_twp_step2_buttons(), parse_mode="html")
 
-
-# ==========================================
-# Navigation & Step Callback Handlers
-# ==========================================
 
 @Friday.bot.on_callback_query(filters.regex(r"^add_session"))
 @log_errors
@@ -263,6 +253,7 @@ async def add_session_yes_cb_handler(c, cb):
     await cb.answer()
     if hasattr(Friday.bot, "_conversations"):
         from Main.utils.suppress import suppress_error
+
         with suppress_error():
             for c_obj in list(Friday.bot._conversations.get(cb.chat_id, set())):
                 c_obj._cancel_all()
@@ -308,10 +299,6 @@ async def add_session_yes_cb_handler(c, cb):
         )
 
 
-# ==========================================
-# Database Selection & Next Step
-# ==========================================
-
 @Friday.bot.on_callback_query(filters.regex(r"^twp_set_db:"))
 async def twp_set_db_handler(c, cq):
     if not is_twp_authorized(cq.sender_id):
@@ -334,6 +321,7 @@ async def twp_set_db_handler(c, cq):
         await cq.answer()
         if hasattr(Friday.bot, "_conversations"):
             from Main.utils.suppress import suppress_error
+
             with suppress_error():
                 for c_obj in list(Friday.bot._conversations.get(cq.chat_id, set())):
                     c_obj._cancel_all()
@@ -371,10 +359,6 @@ async def twp_set_db_handler(c, cq):
                 parse_mode="html",
             )
 
-
-# ==========================================
-# Command Prefix Selector
-# ==========================================
 
 @Friday.bot.on_callback_query(filters.regex(r"^twp_prefix_menu"))
 async def twp_prefix_menu_handler(c, cq):
@@ -428,10 +412,6 @@ async def twp_set_prefix_handler(c, cq):
     ]
     await cq.edit(text, buttons=buttons, parse_mode="html")
 
-
-# ==========================================
-# Diagnostics
-# ==========================================
 
 @Friday.bot.on_callback_query(filters.regex(r"^twp_diag"))
 async def twp_diag_handler(c, cq):

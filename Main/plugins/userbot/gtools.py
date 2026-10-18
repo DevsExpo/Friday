@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -53,9 +53,7 @@ async def gban(c: Client, m: Message):
     reason = reason or "NR"
     if user_id in gbanned_users:
         return await msg.edit_msg("ALREADY_GBANNED")
-    await gban_db.insert_one(
-        {"user_id": int(user_id), "reason": reason, "client_id": my_id}
-    )
+    await gban_db.insert_one({"user_id": int(user_id), "reason": reason, "client_id": my_id})
     if "--no-cache" not in m.user_args:
         chats = USER_CHAT_CACHE or await c.fetch_chats()
     else:
@@ -162,12 +160,8 @@ async def gwatch_(c: Client, m: Message):
     try:
         await c.kick_chat_member(m.chat.id, user_id)
     except Exception as e:
-        return Friday.log(
-            f"ERROR : Unable to kick gbanned user! \nError : [{e}]", level=logging.DEBUG
-        )
+        return Friday.log(f"ERROR : Unable to kick gbanned user! \nError : [{e}]", level=logging.DEBUG)
     if await Friday.config.get_env("ENABLE_GLOGS") and Friday.log_chat:
         chat_ = m.chat.username or m.chat.id
-        gbanned_ = await Friday.get_string(
-            "GBANNED_USER_JOINED", args=(m.from_user.mention, chat_, m.id)
-        )
+        gbanned_ = await Friday.get_string("GBANNED_USER_JOINED", args=(m.from_user.mention, chat_, m.id))
         await c.send_message(Friday.log_chat, gbanned_)

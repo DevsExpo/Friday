@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -10,7 +10,8 @@ from Main import Friday
 from Main.core.types.client import FridayTelegramClient as Client
 from Main.core.decorators import check_perm
 from Main.core.types.message import Message
-from Main.utils.custom_filters import create, Filter
+from Main.utils.custom_filters import create
+from Main.utils.ui_tokens import STATUS, ADMIN
 
 warn_count = {}
 
@@ -56,21 +57,25 @@ async def add_blacklist_cmd_handler(c: Client, m: Message):
         if await bl_db.find_one({"chat_id": m.chat.id, "bl_word": w, "client_id": my_id}):
             already.append(w)
             continue
-        await bl_db.insert_one(
-            {"chat_id": m.chat.id, "bl_word": w, "warns": warns, "client_id": my_id}
-        )
+        await bl_db.insert_one({"chat_id": m.chat.id, "bl_word": w, "warns": warns, "client_id": my_id})
         added.append(w)
 
     if len(words) == 1:
         if added:
             return await m.handle_message("WORD_BLACKLISTED", string_args=(added[0],))
-        return await m.handle_message("ALREADY_BLACKLISTED", string_args=(already[0], getattr(m.chat, "title", str(m.chat.id))))
+        return await m.handle_message(
+            "ALREADY_BLACKLISTED", string_args=(already[0], getattr(m.chat, "title", str(m.chat.id)))
+        )
 
     res_parts = []
     if added:
-        res_parts.append(f"⛔ <b>Blacklisted {len(added)} word(s):</b> {', '.join(f'<code>{x}</code>' for x in added)}")
+        res_parts.append(
+            f"{STATUS.DENIED} <b>Blacklisted {len(added)} word(s):</b> {', '.join(f'<code>{x}</code>' for x in added)}"
+        )
     if already:
-        res_parts.append(f"ℹ️ <b>Already blacklisted ({len(already)}):</b> {', '.join(f'<code>{x}</code>' for x in already)}")
+        res_parts.append(
+            f"{STATUS.INFO} <b>Already blacklisted ({len(already)}):</b> {', '.join(f'<code>{x}</code>' for x in already)}"
+        )
     await m.handle_message("\n".join(res_parts))
 
 
@@ -91,9 +96,12 @@ async def list_blacklist_cmd_handler(c: Client, m: Message):
     if not bldata:
         await processing_msg.edit_msg("NO_BLACKLIST")
         return ""
-    result = Friday.get_string("BLACKLIST_WORD", args=(getattr(m.chat, "title", str(m.chat.id)),)) or "<b>Blacklisted words:</b>\n"
+    result = (
+        Friday.get_string("BLACKLIST_WORD", args=(getattr(m.chat, "title", str(m.chat.id)),))
+        or "<b>Blacklisted words:</b>\n"
+    )
     for bl_word in bldata:
-        result += f"◍ <code>{bl_word['bl_word']}</code> \n"
+        result += f"{STATUS.BULLET} <code>{bl_word['bl_word']}</code> \n"
     await processing_msg.edit(result, parse_mode="html")
 
 
@@ -145,9 +153,13 @@ async def delete_blacklist_cmd_handler(c: Client, m: Message):
 
     res_parts = []
     if removed:
-        res_parts.append(f"🗑️ <b>Removed {len(removed)} blacklisted word(s):</b> {', '.join(f'<code>{x}</code>' for x in removed)}")
+        res_parts.append(
+            f"{ADMIN.TRASH} <b>Removed {len(removed)} blacklisted word(s):</b> {', '.join(f'<code>{x}</code>' for x in removed)}"
+        )
     if not_found:
-        res_parts.append(f"ℹ️ <b>Not in blacklist ({len(not_found)}):</b> {', '.join(f'<code>{x}</code>' for x in not_found)}")
+        res_parts.append(
+            f"{STATUS.INFO} <b>Not in blacklist ({len(not_found)}):</b> {', '.join(f'<code>{x}</code>' for x in not_found)}"
+        )
     await processing_msg.edit("\n".join(res_parts), parse_mode="html")
 
 

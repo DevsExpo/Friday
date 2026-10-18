@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -31,9 +31,7 @@ def run_in_exc(func_):
 @run_in_exc
 def make_file_from_text(input_: str, file_name=None, file_suffix=".txt"):
     letters = string.ascii_lowercase
-    file_name = (
-        file_name or "".join(random.choice(letters) for _ in range(5)) + file_suffix
-    )
+    file_name = file_name or "".join(random.choice(letters) for _ in range(5)) + file_suffix
 
     if os.path.exists(file_name):
         os.remove(file_name)

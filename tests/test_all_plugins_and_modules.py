@@ -1,17 +1,13 @@
 import pytest
 import os
-import time
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import Main
-from Main.core.client import FridayClient
-from Main.core.types.client import FridayTelegramClient
-from Main.core.types.message import Message, UserWrapper, ChatWrapper, enrich_message
+from Main.core.types.message import Message
 from Main.utils.essentials import Essentials
-from Main.utils.dev_func import eval_py, exec_terminal
+from Main.utils.dev_func import exec_terminal
 from Main.utils import file_helpers
-from Main.utils.custom_filters import filters, user_filters, create, Filter
 
 
 @pytest.fixture(scope="module")
@@ -84,8 +80,16 @@ async def test_database_all_plugin_collections():
     """Verify all database collections used by plugins work with LocalDatabase."""
     db = Main.Friday.local_db
     collections = [
-        "SETTINGS", "DATA", "USERS", "ENV", "STICKERS",
-        "PLUGINS", "WELCOME", "BLACKLIST", "FILTERS", "PM_PERMIT"
+        "SETTINGS",
+        "DATA",
+        "USERS",
+        "ENV",
+        "STICKERS",
+        "PLUGINS",
+        "WELCOME",
+        "BLACKLIST",
+        "FILTERS",
+        "PM_PERMIT",
     ]
     for col_name in collections:
         col = db.make_collection(col_name)
@@ -222,44 +226,9 @@ async def test_bot_help_and_settings_buttons():
 
 
 @pytest.mark.asyncio
-async def test_selftest_and_diagnostics():
-    """Verify single-account self-test mode and diagnostic tools."""
-    import Main.plugins.userbot.selftest as selftest_mod
-
-    mock_client = AsyncMock()
-    mock_client.myself = MagicMock(first_name="TestUser", id=12345)
-    mock_client.get_me = AsyncMock(return_value=mock_client.myself)
-
-    mock_msg = Message(id=10, peer_id=None)
-    mock_msg.chat_id = -100123456
-    mock_msg.handle_message = AsyncMock(return_value=mock_msg)
-
-    # Enable self-test mode
-    mock_msg.user_input = "on"
-    await selftest_mod.toggle_selftest_cmd(mock_client, mock_msg)
-    assert Main.Friday.self_test_mode is True
-    assert "ENABLED" in mock_msg.handle_message.call_args[0][0]
-
-    # Run system diagnostics
-    mock_msg.handle_message.reset_mock()
-    mock_msg.user_input = ""
-    await selftest_mod.test_diagnose_cmd(mock_client, mock_msg)
-    mock_msg.handle_message.assert_called_once()
-    assert "Diagnostics" in mock_msg.handle_message.call_args[0][0]
-
-    # Disable self-test mode
-    mock_msg.handle_message.reset_mock()
-    mock_msg.user_input = "off"
-    await selftest_mod.toggle_selftest_cmd(mock_client, mock_msg)
-    assert Main.Friday.self_test_mode is False
-    assert "DISABLED" in mock_msg.handle_message.call_args[0][0]
-
-
-@pytest.mark.asyncio
 async def test_account_settings_and_flags():
     """Verify telegram_account_manager handles flags and overview gracefully."""
     import Main.plugins.userbot.telegram_account_manager as acc_mod
-    from telethon.tl import types
 
     mock_client = AsyncMock()
     mock_client.myself = MagicMock(id=9999, first_name="Dev", last_name="User", username="devuser")
@@ -367,6 +336,7 @@ async def test_account_settings_all_flags():
 
 @pytest.mark.asyncio
 async def test_telethon_types_patched_properties():
+    # pylint: disable=no-member
     """Verify types.User, types.Channel, and types.Chat have type and mention properties."""
     from telethon import types as tl_types
     from Main.core.types.message import Message
@@ -491,6 +461,3 @@ async def test_cloud_tools_rm_security_root_protection():
 
     await cloud_mod.remove_cmd_handler(mock_client, mock_msg)
     assert "Security Violation" in mock_msg.edit.call_args[0][0]
-
-
-

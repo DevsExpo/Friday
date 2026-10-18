@@ -1,16 +1,16 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
-import os
+import logging
 from traceback import format_exc
 from Main import Friday
-from Main.core.fpm import FPM
 from Main.core.types.message import Message
+from Main.utils.ui_tokens import ADMIN, INDICATOR, STATUS
 
 packages_list = Friday.db.make_collection("packages") if Friday.db else None
 
@@ -20,6 +20,7 @@ def verify_owner(m: Message) -> bool:
     if sender_id is None and hasattr(m, "from_user") and m.from_user:
         sender_id = getattr(m.from_user, "id", None)
     from Main.utils.inline_helper import is_owner
+
     if is_owner(sender_id):
         return True
     if getattr(m, "is_self", False):
@@ -39,9 +40,12 @@ def verify_owner(m: Message) -> bool:
 )
 async def fpm_hub_cmd(c, m: Message):
     if not verify_owner(m):
-        return await m.handle_message("⛔ <b>Access Denied:</b> Only the Friday owner can use the Package Manager.")
+        return await m.handle_message(
+            f"{STATUS.DENIED} <b>Access Denied:</b> Only the Friday owner can use the Package Manager."
+        )
     if not m.user_input:
         from Main.utils.inline_helper import send_inline_widget
+
         sent = await send_inline_widget(c, m, "fpm")
         if sent:
             return
@@ -54,10 +58,10 @@ async def fpm_hub_cmd(c, m: Message):
     cmd_help={
         "example": [
             "fpm_install vc",
-            "fpm_install StarkGang/VCPlugin",
+            "fpm_install DevsExpo/VCPlugin",
             "fpm_install https://github.com/username/XtraPlugins -sub media",
         ],
-        "help": "Install external plugins with optional subcategory segregation and fast dependency resolution. Supports shortcuts like 'vc' for StarkGang/VCPlugin.",
+        "help": "Install external plugins with optional subcategory segregation and fast dependency resolution. Supports shortcuts like 'vc' for DevsExpo/VCPlugin.",
         "user_args": [
             {
                 "arg": "sub",
@@ -75,7 +79,9 @@ async def fpm_hub_cmd(c, m: Message):
 )
 async def install_pack(c, m: Message):
     if not verify_owner(m):
-        return await m.handle_message("⛔ <b>Access Denied:</b> Only the Friday owner can install external packages.")
+        return await m.handle_message(
+            f"{STATUS.DENIED} <b>Access Denied:</b> Only the Friday owner can install external packages."
+        )
     msg = await m.handle_message("PROCESSING")
     raw = m.user_input.strip()
 
@@ -89,9 +95,9 @@ async def install_pack(c, m: Message):
 
     source = raw.strip()
     if source.lower() in ("vc", "vcplugin"):
-        source = "StarkGang/VCPlugin"
+        source = "DevsExpo/VCPlugin"
     elif source.lower() in ("xtra", "xtraplugins"):
-        source = "StarkGang/XtraPlugins"
+        source = "DevsExpo/XtraPlugins"
 
     # Priority 1: Use modern PluginManager (FPM v3)
     if Friday.plugin_manager is not None:
@@ -115,32 +121,27 @@ async def install_pack(c, m: Message):
                     subs_text = f"\n• <b>Active Subcategories:</b> {subs_list}"
 
                 await msg.edit_msg(
-                    f"✅ <b>Successfully installed plugin:</b> <code>{name}</code>\n"
+                    f"{STATUS.SUCCESS} <b>Successfully installed plugin:</b> <code>{name}</code>\n"
                     f"• <b>Author:</b> {author}\n"
                     f"• <b>Version:</b> <code>{version}</code>"
                     f"{subs_text}"
                 )
 
                 if "ios" in m.user_args and packages_list:
-                    doc_data = {"source": source, "subcategories": subcategories}
-                    if pl := await packages_list.find_one({"_id": "FPM"}):
-                        await packages_list.update_one(
-                            {"_id": "FPM"}, {"$addToSet": {"installed_packages": source}}
-                        )
+                    if await packages_list.find_one({"_id": "FPM"}):
+                        await packages_list.update_one({"_id": "FPM"}, {"$addToSet": {"installed_packages": source}})
                     else:
-                        await packages_list.insert_one(
-                            {"_id": "FPM", "installed_packages": [source]}
-                        )
+                        await packages_list.insert_one({"_id": "FPM", "installed_packages": [source]})
                 return
         except ValueError as e:
-            return await msg.edit_msg(f"⚠️ {e}")
+            return await msg.edit_msg(f"{STATUS.WARNING} {e}")
         except Exception as e:
             logging.error(format_exc())
             if source.startswith(("http://", "https://", "git@")) or "/" in source:
-                return await msg.edit_msg(f"❌ <b>Installation Failed:</b> <code>{e}</code>")
+                return await msg.edit_msg(f"{STATUS.ERROR} <b>Installation Failed:</b> <code>{e}</code>")
 
     return await msg.edit_msg(
-        f"❌ <b>Package not found:</b> <code>{source}</code>. Please provide a valid GitHub repository (e.g. <code>username/repo</code>) or shortcut."
+        f"{STATUS.ERROR} <b>Package not found:</b> <code>{source}</code>. Please provide a valid GitHub repository (e.g. <code>username/repo</code>) or shortcut."
     )
 
 
@@ -156,24 +157,26 @@ async def install_pack(c, m: Message):
 )
 async def list_packages(c, m: Message):
     if not Friday.plugin_manager:
-        return await m.handle_message("❌ Plugin Manager not initialized.")
+        return await m.handle_message(f"{STATUS.ERROR} Plugin Manager not initialized.")
 
     installed = await Friday.plugin_manager.list_installed()
     if not installed:
-        return await m.handle_message("📦 <b>No external plugins currently installed.</b>\nInstall one via <code>.fpm_install &lt;repo&gt;</code>.")
+        return await m.handle_message(
+            f"{ADMIN.PACKAGE} <b>No external plugins currently installed.</b>\nInstall one via <code>.fpm_install &lt;repo&gt;</code>."
+        )
 
     lines = []
     for idx, p in enumerate(installed, 1):
         subs = p.active_subcategories
         subs_badge = f" [<code>{', '.join(subs)}</code>]" if subs else ""
-        quarantine_badge = " ⚠️ <i>(Quarantined)</i>" if p.quarantined else ""
+        quarantine_badge = f" {STATUS.WARNING} <i>(Quarantined)</i>" if p.quarantined else ""
         lines.append(
             f"<b>{idx}.</b> <code>{p.name}</code> (v{p.version}) by <i>{p.author}</i>{quarantine_badge}\n"
             f"   • Source: <code>{p.source}</code>{subs_badge}"
         )
 
     report = (
-        f"📦 <b>Installed Friday External Plugins ({len(installed)}):</b>\n\n"
+        f"{ADMIN.PACKAGE} <b>Installed Friday External Plugins ({len(installed)}):</b>\n\n"
         + "\n\n".join(lines)
         + "\n\n<i>Manage subcategories via <code>.fpm_sub &lt;plugin&gt;</code></i>"
     )
@@ -193,21 +196,23 @@ async def list_packages(c, m: Message):
 )
 async def list_plugin_subcategories(c, m: Message):
     if not Friday.plugin_manager:
-        return await m.handle_message("❌ Plugin Manager not initialized.")
+        return await m.handle_message(f"{STATUS.ERROR} Plugin Manager not initialized.")
 
     pname = m.user_input.strip()
     manifest = Friday.plugin_manager._installed.get(pname)
     if not manifest:
-        return await m.handle_message(f"❌ Plugin <code>{pname}</code> is not installed.")
+        return await m.handle_message(f"{STATUS.ERROR} Plugin <code>{pname}</code> is not installed.")
 
     subs = manifest.subcategories
     if not subs:
-        return await m.handle_message(f"ℹ️ Plugin <code>{pname}</code> is monolithic and has no segregated subcategories.")
+        return await m.handle_message(
+            f"{STATUS.INFO} Plugin <code>{pname}</code> is monolithic and has no segregated subcategories."
+        )
 
     lines = []
     for sname, sdata in subs.items():
         is_active = sname in manifest.active_subcategories
-        status_icon = "🟢 Active" if is_active else "⚪ Disabled"
+        status_icon = f"{INDICATOR.GREEN} Active" if is_active else f"{INDICATOR.WHITE} Disabled"
         deps = sdata.get("dependencies", [])
         deps_str = f" | Deps: {', '.join(deps)}" if deps else " | Zero Deps"
         lines.append(
@@ -216,9 +221,7 @@ async def list_plugin_subcategories(c, m: Message):
         )
 
     report = (
-        f"🗂 <b>Subcategories for {manifest.name}:</b>\n\n"
-        + "\n\n".join(lines)
-        + "\n\n<b>Commands:</b>\n"
+        f"{ADMIN.FOLDER} <b>Subcategories for {manifest.name}:</b>\n\n" + "\n\n".join(lines) + "\n\n<b>Commands:</b>\n"
         f"• <code>.fpm_enable {pname} &lt;category&gt;</code>\n"
         f"• <code>.fpm_disable {pname} &lt;category&gt;</code>"
     )
@@ -238,20 +241,26 @@ async def list_plugin_subcategories(c, m: Message):
 )
 async def enable_subcategory_cmd(c, m: Message):
     if not verify_owner(m):
-        return await m.handle_message("⛔ <b>Access Denied:</b> Only the Friday owner can modify plugin subcategories.")
+        return await m.handle_message(
+            f"{STATUS.DENIED} <b>Access Denied:</b> Only the Friday owner can modify plugin subcategories."
+        )
     if not Friday.plugin_manager:
-        return await m.handle_message("❌ Plugin Manager not initialized.")
+        return await m.handle_message(f"{STATUS.ERROR} Plugin Manager not initialized.")
 
     tokens = m.user_input.strip().split()
     if len(tokens) < 2:
-        return await m.handle_message("⚠️ <b>Usage:</b> <code>.fpm_enable &lt;plugin_name&gt; &lt;subcategory&gt;</code>")
+        return await m.handle_message(
+            f"{STATUS.WARNING} <b>Usage:</b> <code>.fpm_enable &lt;plugin_name&gt; &lt;subcategory&gt;</code>"
+        )
 
     pname, sub = tokens[0], tokens[1].lower()
     success = await Friday.plugin_manager.enable_subcategory(pname, sub)
     if success:
-        await m.handle_message(f"✅ Subcategory <code>{sub}</code> in <b>{pname}</b> enabled and loaded!")
+        await m.handle_message(f"{STATUS.SUCCESS} Subcategory <code>{sub}</code> in <b>{pname}</b> enabled and loaded!")
     else:
-        await m.handle_message(f"❌ Failed to enable subcategory <code>{sub}</code>. Check plugin name and subcategories.")
+        await m.handle_message(
+            f"{STATUS.ERROR} Failed to enable subcategory <code>{sub}</code>. Check plugin name and subcategories."
+        )
 
 
 @Friday.register_on_cmd(
@@ -267,20 +276,26 @@ async def enable_subcategory_cmd(c, m: Message):
 )
 async def disable_subcategory_cmd(c, m: Message):
     if not verify_owner(m):
-        return await m.handle_message("⛔ <b>Access Denied:</b> Only the Friday owner can modify plugin subcategories.")
+        return await m.handle_message(
+            f"{STATUS.DENIED} <b>Access Denied:</b> Only the Friday owner can modify plugin subcategories."
+        )
     if not Friday.plugin_manager:
-        return await m.handle_message("❌ Plugin Manager not initialized.")
+        return await m.handle_message(f"{STATUS.ERROR} Plugin Manager not initialized.")
 
     tokens = m.user_input.strip().split()
     if len(tokens) < 2:
-        return await m.handle_message("⚠️ <b>Usage:</b> <code>.fpm_disable &lt;plugin_name&gt; &lt;subcategory&gt;</code>")
+        return await m.handle_message(
+            f"{STATUS.WARNING} <b>Usage:</b> <code>.fpm_disable &lt;plugin_name&gt; &lt;subcategory&gt;</code>"
+        )
 
     pname, sub = tokens[0], tokens[1].lower()
     success = await Friday.plugin_manager.disable_subcategory(pname, sub)
     if success:
-        await m.handle_message(f"⚪ Subcategory <code>{sub}</code> in <b>{pname}</b> disabled. Restart Friday to unload active handlers.")
+        await m.handle_message(
+            f"{INDICATOR.WHITE} Subcategory <code>{sub}</code> in <b>{pname}</b> disabled. Restart Friday to unload active handlers."
+        )
     else:
-        await m.handle_message(f"❌ Failed to disable subcategory <code>{sub}</code>.")
+        await m.handle_message(f"{STATUS.ERROR} Failed to disable subcategory <code>{sub}</code>.")
 
 
 @Friday.register_on_cmd(
@@ -292,24 +307,30 @@ async def disable_subcategory_cmd(c, m: Message):
 )
 async def doctor_cmd(c, m: Message):
     if not Friday.plugin_manager:
-        return await m.handle_message("❌ Plugin Manager not initialized.")
+        return await m.handle_message(f"{STATUS.ERROR} Plugin Manager not initialized.")
 
-    msg = await m.handle_message("🩺 Running FPM health check across all plugins and Python environment...")
+    msg = await m.handle_message(
+        f"{STATUS.DOCTOR} Running FPM health check across all plugins and Python environment..."
+    )
     doc = await Friday.plugin_manager.doctor()
 
     total = doc["total_plugins"]
     healthy = len(doc["healthy"])
     issues = doc["issues"]
 
-    status_icon = "🟢 Healthy" if not issues else "⚠️ Issues Found"
+    status_icon = f"{INDICATOR.GREEN} Healthy" if not issues else f"{STATUS.WARNING} Issues Found"
 
     issue_block = ""
     if issues:
         issue_lines = [f"  • {iss}" for iss in issues]
-        issue_block = "\n\n<b>Detected Issues:</b>\n" + "\n".join(issue_lines) + "\n\n<i>Run <code>.fpm_repair</code> to batch-install missing packages!</i>"
+        issue_block = (
+            "\n\n<b>Detected Issues:</b>\n"
+            + "\n".join(issue_lines)
+            + "\n\n<i>Run <code>.fpm_repair</code> to batch-install missing packages!</i>"
+        )
 
     report = (
-        f"🩺 <b>FPM Diagnostic Doctor Report</b>\n\n"
+        f"{STATUS.DOCTOR} <b>FPM Diagnostic Doctor Report</b>\n\n"
         f"• <b>Status:</b> {status_icon}\n"
         f"• <b>Plugins Inspected:</b> <code>{total}</code>\n"
         f"• <b>Fully Satisfied:</b> <code>{healthy}/{total}</code>"
@@ -327,20 +348,28 @@ async def doctor_cmd(c, m: Message):
 )
 async def repair_cmd(c, m: Message):
     if not verify_owner(m):
-        return await m.handle_message("⛔ <b>Access Denied:</b> Only the Friday owner can run FPM repair.")
+        return await m.handle_message(
+            f"{STATUS.DENIED} <b>Access Denied:</b> Only the Friday owner can run FPM repair."
+        )
     if not Friday.plugin_manager:
-        return await m.handle_message("❌ Plugin Manager not initialized.")
+        return await m.handle_message(f"{STATUS.ERROR} Plugin Manager not initialized.")
 
-    msg = await m.handle_message("🔧 Scanning and resolving missing plugin dependencies...")
+    msg = await m.handle_message(f"{ADMIN.WRENCH} Scanning and resolving missing plugin dependencies...")
     repaired, failed = await Friday.plugin_manager.repair(msg)
 
     if repaired == 0 and failed == 0:
-        return await msg.edit_msg("✅ <b>Everything is in order:</b> No missing dependencies detected across any plugins.")
+        return await msg.edit_msg(
+            f"{STATUS.SUCCESS} <b>Everything is in order:</b> No missing dependencies detected across any plugins."
+        )
 
     if failed == 0:
-        await msg.edit_msg(f"✅ <b>Repair Complete:</b> Successfully installed <code>{repaired}</code> missing package(s)!")
+        await msg.edit_msg(
+            f"{STATUS.SUCCESS} <b>Repair Complete:</b> Successfully installed <code>{repaired}</code> missing package(s)!"
+        )
     else:
-        await msg.edit_msg(f"⚠️ <b>Partial Repair:</b> Installed {repaired} package(s), but {failed} package(s) encountered installation errors.")
+        await msg.edit_msg(
+            f"{STATUS.WARNING} <b>Partial Repair:</b> Installed {repaired} package(s), but {failed} package(s) encountered installation errors."
+        )
 
 
 @Friday.register_on_cmd(
@@ -353,7 +382,9 @@ async def repair_cmd(c, m: Message):
 )
 async def uninstall_pack(c, m: Message):
     if not verify_owner(m):
-        return await m.handle_message("⛔ <b>Access Denied:</b> Only the Friday owner can uninstall external plugins.")
+        return await m.handle_message(
+            f"{STATUS.DENIED} <b>Access Denied:</b> Only the Friday owner can uninstall external plugins."
+        )
     msg = await m.handle_message("PROCESSING")
     pn = m.user_input.strip()
 
@@ -362,15 +393,13 @@ async def uninstall_pack(c, m: Message):
             success = await Friday.plugin_manager.uninstall(pn, msg=msg)
             if success:
                 if packages_list:
-                    await packages_list.update_one(
-                        {"_id": "FPM"}, {"$pull": {"installed_packages": pn}}
-                    )
-                return await msg.edit_msg(f"🗑️ Plugin <code>{pn}</code> uninstalled successfully.")
-            return await msg.edit_msg(f"❌ Plugin <code>{pn}</code> is not installed.")
+                    await packages_list.update_one({"_id": "FPM"}, {"$pull": {"installed_packages": pn}})
+                return await msg.edit_msg(f"{ADMIN.TRASH} Plugin <code>{pn}</code> uninstalled successfully.")
+            return await msg.edit_msg(f"{STATUS.ERROR} Plugin <code>{pn}</code> is not installed.")
         except Exception as e:
-            return await msg.edit_msg(f"❌ Uninstall failed: <code>{e}</code>")
+            return await msg.edit_msg(f"{STATUS.ERROR} Uninstall failed: <code>{e}</code>")
 
-    return await msg.edit_msg(f"❌ Plugin <code>{pn}</code> is not installed.")
+    return await msg.edit_msg(f"{STATUS.ERROR} Plugin <code>{pn}</code> is not installed.")
 
 
 @Friday.register_on_cmd(
@@ -383,7 +412,9 @@ async def uninstall_pack(c, m: Message):
 )
 async def update_pack(c, m: Message):
     if not verify_owner(m):
-        return await m.handle_message("⛔ <b>Access Denied:</b> Only the Friday owner can update external plugins.")
+        return await m.handle_message(
+            f"{STATUS.DENIED} <b>Access Denied:</b> Only the Friday owner can update external plugins."
+        )
     msg = await m.handle_message("PROCESSING")
     pn = m.user_input.strip()
 
@@ -392,10 +423,10 @@ async def update_pack(c, m: Message):
             manifest = await Friday.plugin_manager.update(pn, msg=msg)
             if manifest:
                 return await msg.edit_msg(
-                    f"✅ Plugin <code>{pn}</code> updated successfully to version <code>{manifest.version}</code>."
+                    f"{STATUS.SUCCESS} Plugin <code>{pn}</code> updated successfully to version <code>{manifest.version}</code>."
                 )
-            return await msg.edit_msg(f"❌ Could not update plugin <code>{pn}</code>.")
+            return await msg.edit_msg(f"{STATUS.ERROR} Could not update plugin <code>{pn}</code>.")
         except Exception as e:
-            return await msg.edit_msg(f"❌ Update error: <code>{e}</code>")
+            return await msg.edit_msg(f"{STATUS.ERROR} Update error: <code>{e}</code>")
 
-    return await msg.edit_msg(f"❌ Could not update plugin <code>{pn}</code>.")
+    return await msg.edit_msg(f"{STATUS.ERROR} Could not update plugin <code>{pn}</code>.")

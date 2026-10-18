@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -20,27 +20,22 @@ Next-generation modular plugin manager supporting:
 
 from __future__ import annotations
 
-import os
 import sys
-import glob
 import json
 import shutil
 import asyncio
-import hashlib
 import logging
 import tarfile
 import zipfile
-import importlib
-import importlib.util
 import contextlib
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, Set
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from dataclasses import dataclass, field, asdict
 
 import aiofiles
 import httpx
 
-from .fpm_env_setup import is_package_satisfied, clean_package_name
+from .fpm_env_setup import is_package_satisfied
 
 logger = logging.getLogger("friday.fpm")
 
@@ -49,11 +44,39 @@ GITHUB_RAW_BASE = "https://raw.githubusercontent.com/{repo}/{branch}/{path}"
 GITHUB_ARCHIVE_BASE = "https://github.com/{repo}/archive/refs/heads/{branch}.zip"
 
 PLUGIN_SHORTCUTS: Dict[str, str] = {
-    "vc": "StarkGang/VCPlugin",
-    "vcplugin": "StarkGang/VCPlugin",
-    "xtra": "StarkGang/XtraPlugins",
-    "xtraplugins": "StarkGang/XtraPlugins",
+    "vc": "DevsExpo/VCPlugin",
+    "vcplugin": "DevsExpo/VCPlugin",
+    "xtra": "DevsExpo/XtraPlugins",
+    "xtraplugins": "DevsExpo/XtraPlugins",
 }
+
+
+def _safe_extract_zip(z: zipfile.ZipFile, dest: Path) -> None:
+    """Extract zip archive safely while guarding against directory traversal attacks."""
+    dest_resolved = dest.resolve()
+    for member in z.infolist():
+        target = (dest / member.filename).resolve()
+        if not str(target).startswith(str(dest_resolved)):
+            raise ValueError(f"Dangerous path traversal detected in zip archive: {member.filename}")
+        if member.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with z.open(member) as source, open(target, "wb") as outfile:
+                shutil.copyfileobj(source, outfile)
+
+
+def _safe_extract_tar(t: tarfile.TarFile, dest: Path) -> None:
+    """Extract tar archive safely using filter='data' or manual member verification."""
+    if hasattr(tarfile, "data_filter"):
+        t.extractall(dest, filter="data")  # nosec B202
+        return
+    dest_resolved = dest.resolve()
+    for member in t.getmembers():
+        target = (dest / member.name).resolve()
+        if not str(target).startswith(str(dest_resolved)):
+            raise ValueError(f"Dangerous path traversal detected in tar archive: {member.name}")
+        t.extract(member, dest)  # nosec B202
 
 
 @dataclass
@@ -62,10 +85,10 @@ class PluginManifest:
     version: str = "0.0.1"
     description: str = ""
     author: str = "Unknown"
-    provider: str = "local"       # local | github | url | registry
-    source: str = ""              # repo "user/repo", URL, or registry name
+    provider: str = "local"  # local | github | url | registry
+    source: str = ""  # repo "user/repo", URL, or registry name
     branch: str = "main"
-    entry: str = ""               # main .py file or empty for multi-module
+    entry: str = ""  # main .py file or empty for multi-module
     dependencies: List[str] = field(default_factory=list)
     apt_dependencies: List[str] = field(default_factory=list)
     subcategories: Dict[str, Dict[str, Any]] = field(default_factory=dict)
@@ -85,6 +108,7 @@ class PluginManifest:
 
 class PluginProvider:
     """Base class for plugin providers."""
+
     name: str = "base"
 
     async def fetch(self, manifest: PluginManifest, dest_dir: Path) -> Path:
@@ -96,6 +120,7 @@ class PluginProvider:
 
 class LocalProvider(PluginProvider):
     """Load a plugin from the local filesystem."""
+
     name: str = "local"
 
     async def fetch(self, manifest: PluginManifest, dest_dir: Path) -> Path:
@@ -130,9 +155,12 @@ class LocalProvider(PluginProvider):
 
 class GithubProvider(PluginProvider):
     """Download a plugin from a GitHub repository."""
+
     name = "github"
 
-    def __init__(self, repo_url: Optional[Union[str, httpx.AsyncClient]] = None, client: Optional[httpx.AsyncClient] = None) -> None:
+    def __init__(
+        self, repo_url: Optional[Union[str, httpx.AsyncClient]] = None, client: Optional[httpx.AsyncClient] = None
+    ) -> None:
         if isinstance(repo_url, httpx.AsyncClient):
             client = repo_url
             repo_url = None
@@ -150,7 +178,7 @@ class GithubProvider(PluginProvider):
         s = source.strip()
         for prefix in ("https://github.com/", "http://github.com/", "git@github.com:"):
             if s.startswith(prefix):
-                s = s[len(prefix):]
+                s = s[len(prefix) :]
                 break
         if s.endswith(".git"):
             s = s[:-4]
@@ -184,7 +212,7 @@ class GithubProvider(PluginProvider):
                 prefix = list(top_level_dirs)[0] + "/"
                 for member in z.infolist():
                     if member.filename.startswith(prefix) and member.filename != prefix:
-                        target = dest / member.filename[len(prefix):]
+                        target = dest / member.filename[len(prefix) :]
                         if member.is_dir():
                             target.mkdir(parents=True, exist_ok=True)
                         else:
@@ -192,7 +220,7 @@ class GithubProvider(PluginProvider):
                             with z.open(member) as source, open(target, "wb") as outfile:
                                 shutil.copyfileobj(source, outfile)
             else:
-                z.extractall(dest)
+                _safe_extract_zip(z, dest)
 
         zip_path.unlink(missing_ok=True)
         return dest
@@ -217,6 +245,7 @@ class GithubProvider(PluginProvider):
 
 class URLProvider(PluginProvider):
     """Download a plugin from a direct URL (zip or .py)."""
+
     name = "url"
 
     def __init__(self, client: Optional[httpx.AsyncClient] = None) -> None:
@@ -237,11 +266,11 @@ class URLProvider(PluginProvider):
 
         if filename.endswith(".zip"):
             with zipfile.ZipFile(file_path, "r") as z:
-                z.extractall(dest)
+                _safe_extract_zip(z, dest)
             file_path.unlink(missing_ok=True)
         elif filename.endswith(".tar.gz") or filename.endswith(".tgz"):
             with tarfile.open(file_path, "r:gz") as t:
-                t.extractall(dest)
+                _safe_extract_tar(t, dest)
             file_path.unlink(missing_ok=True)
 
         return dest
@@ -249,6 +278,7 @@ class URLProvider(PluginProvider):
 
 class RegistryProvider(PluginProvider):
     """Install plugins from the Friday official registry."""
+
     name = "registry"
 
     def __init__(self, client: Optional[httpx.AsyncClient] = None) -> None:
@@ -318,9 +348,7 @@ class PluginManager:
     def _save_manifest_index(self) -> None:
         try:
             data = {n: m.to_dict() for n, m in self._installed.items()}
-            self.MANIFEST_FILE.write_text(
-                json.dumps(data, indent=2, default=str), encoding="utf-8"
-            )
+            self.MANIFEST_FILE.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
         except Exception as e:
             logger.error(f"Failed to save plugin manifest index: {e}")
 
@@ -357,8 +385,8 @@ class PluginManager:
                     req_file = child / "requirements.txt"
                     if req_file.exists():
                         try:
-                            lines = [l.strip() for l in req_file.read_text(encoding="utf-8").splitlines()]
-                            sub_deps = [l for l in lines if l and not l.startswith("#")]
+                            lines = [ln.strip() for ln in req_file.read_text(encoding="utf-8").splitlines()]
+                            sub_deps = [ln for ln in lines if ln and not ln.startswith("#")]
                         except Exception:
                             pass
 
@@ -391,7 +419,13 @@ class PluginManager:
                 await msg.edit_msg(f"📦 Installing missing packages: <code>{missing_str}</code>...")
 
         proc = await asyncio.create_subprocess_exec(
-            sys.executable, "-m", "pip", "install", "--prefer-binary", "--quiet", *missing,
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--prefer-binary",
+            "--quiet",
+            *missing,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -415,7 +449,7 @@ class PluginManager:
         Install a plugin with optional subcategory segregation.
         Example: install('vc') or install('username/XtraPlugins', subcategories=['media', 'utilities'])
         """
-        # Resolve package shortcuts (e.g. 'vc' -> 'StarkGang/VCPlugin')
+        # Resolve package shortcuts (e.g. 'vc' -> 'DevsExpo/VCPlugin')
         src_clean = source.strip().lower()
         if src_clean in PLUGIN_SHORTCUTS:
             source = PLUGIN_SHORTCUTS[src_clean]
@@ -498,7 +532,11 @@ class PluginManager:
 
         if msg:
             with contextlib.suppress(Exception):
-                active_str = f" ({len(manifest.active_subcategories)} subcategories active)" if manifest.active_subcategories else ""
+                active_str = (
+                    f" ({len(manifest.active_subcategories)} subcategories active)"
+                    if manifest.active_subcategories
+                    else ""
+                )
                 await msg.edit_msg(f"✅ Plugin <code>{manifest.name}</code> installed successfully!{active_str}")
 
         logger.info(f"Plugin installed: {manifest.name} v{manifest.version} [active: {manifest.active_subcategories}]")

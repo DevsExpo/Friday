@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -12,13 +12,12 @@ import re
 import os
 import asyncio
 import logging
-import contextlib
 from dataclasses import dataclass
 from Main.utils.suppress import suppress_error
 from datetime import datetime, timedelta, timezone
 from typing import Any, List, Optional, Tuple, Union
 
-from telethon import errors, utils
+from telethon import errors
 from telethon.tl.patched import Message as TelethonMessage
 from telethon.tl.custom import Message as CustomMessage
 
@@ -64,10 +63,16 @@ class ChatWrapper:
         cid = chat_id or getattr(chat_entity, "id", None)
         if not cid:
             from telethon.utils import get_peer_id
+
             try:
                 cid = get_peer_id(chat_entity)
             except Exception:
-                cid = getattr(chat_entity, "channel_id", None) or getattr(chat_entity, "user_id", None) or getattr(chat_entity, "chat_id", None) or 0
+                cid = (
+                    getattr(chat_entity, "channel_id", None)
+                    or getattr(chat_entity, "user_id", None)
+                    or getattr(chat_entity, "chat_id", None)
+                    or 0
+                )
         self.id: int = int(cid) if cid is not None else 0
         self.title: str = getattr(chat_entity, "title", getattr(chat_entity, "first_name", "Chat"))
         self.username: Optional[str] = getattr(chat_entity, "username", None)
@@ -296,6 +301,7 @@ class Message(TelethonMessage):
             return self._sender_cached
         if self.sender_id:
             from telethon import types as _types
+
             dummy = _types.User(id=self.sender_id)
             self._sender_cached = UserWrapper(dummy)
             return self._sender_cached
@@ -332,6 +338,23 @@ class Message(TelethonMessage):
         return getattr(self, "text", None) or getattr(self, "raw_text", None) or getattr(self, "message", None) or None
 
     @property
+    def prefix(self) -> str:
+        """Dynamically resolve the trigger prefix used in this command, falling back to configured user command handler."""
+        text = self.text or getattr(self, "raw_text", None) or getattr(self, "message", None) or ""
+        try:
+            from Main import Friday
+
+            default_pfx = getattr(Friday, "user_command_handler", ".") or "."
+        except Exception:
+            default_pfx = "."
+
+        if text and len(text) > 0:
+            first_char = text[0]
+            if not first_char.isalnum() and not first_char.isspace():
+                return first_char
+        return default_pfx
+
+    @property
     def command_(self) -> Optional[str]:
         text = self.text or getattr(self, "raw_text", None) or getattr(self, "message", None) or ""
         if not text:
@@ -347,7 +370,7 @@ class Message(TelethonMessage):
         if not msg:
             return None
         if " " in msg:
-            return msg[msg.find(" ") + 1:].strip()
+            return msg[msg.find(" ") + 1 :].strip()
         return None
 
     @property
@@ -407,10 +430,13 @@ class Message(TelethonMessage):
     async def handle_message(self, text: str, **kwargs) -> Any:
         """Edit message if sent by self/userbot, or reply if from sudo/bot."""
         import Main
+
         friday = Main.Friday
         sudo_users = getattr(friday.config, "SUDO_USERS", [])
-        is_bot = getattr(friday, "bot_info", None) and getattr(self.client, "myself", None) and (
-            self.client.myself.id == friday.bot_info.id
+        is_bot = (
+            getattr(friday, "bot_info", None)
+            and getattr(self.client, "myself", None)
+            and (self.client.myself.id == friday.bot_info.id)
         )
 
         sender_id = self.sender_id
@@ -486,8 +512,15 @@ class Message(TelethonMessage):
                     with suppress_error(msg="cleaning edit_msg force_file"):
                         os.remove(file_path)
 
+        buttons = args.get("buttons")
         try:
-            msg = await self.edit(text, parse_mode="html", link_preview=False)
+            if buttons:
+                try:
+                    msg = await self.edit(text, buttons=buttons, parse_mode="html", link_preview=False)
+                except Exception:
+                    msg = await self.edit(text, parse_mode="html", link_preview=False)
+            else:
+                msg = await self.edit(text, parse_mode="html", link_preview=False)
         except errors.MessageTooLongError:
             text_clean = Essentials.md_to_text(text)
             service, paste_link = await Paste(text_clean).paste()
@@ -557,8 +590,15 @@ class Message(TelethonMessage):
                     with suppress_error(msg="cleaning reply_msg force_file"):
                         os.remove(file_path)
 
+        buttons = args.get("buttons")
         try:
-            msg = await self.reply(text, parse_mode="html", link_preview=False)
+            if buttons:
+                try:
+                    msg = await self.reply(text, buttons=buttons, parse_mode="html", link_preview=False)
+                except Exception:
+                    msg = await self.reply(text, parse_mode="html", link_preview=False)
+            else:
+                msg = await self.reply(text, parse_mode="html", link_preview=False)
         except errors.MessageTooLongError:
             text_clean = Essentials.md_to_text(text)
             service, paste_link = await Paste(text_clean).paste()
@@ -600,7 +640,7 @@ class Message(TelethonMessage):
                 **kwargs,
             )
             return enrich_message(res, self.client)
-        except Exception as e:
+        except Exception:
             if send_msg_if_file_invalid and caption:
                 return await self.reply_msg(caption)
             raise
@@ -638,6 +678,7 @@ class Message(TelethonMessage):
 
     async def delete_if_sudo(self, **kwargs) -> Any:
         import Main
+
         sudo = getattr(Main.Friday.config, "SUDO_USERS", [])
         if self.out or (self.from_user and self.from_user.is_self):
             return
@@ -701,6 +742,7 @@ class Message(TelethonMessage):
         client = getattr(self, "client", None)
         if not client:
             import Main
+
             client = Main.Friday.clients[0] if Main.Friday.clients else None
         if not client:
             raise RuntimeError("No client available to copy message")
@@ -719,14 +761,15 @@ class Message(TelethonMessage):
         )
 
 
-
 def enrich_message(event_or_message: Any, client: Any = None) -> Any:
     """Enrich a Telethon message or event with Friday properties."""
     if event_or_message is None:
         return None
     if isinstance(event_or_message, (TelethonMessage, CustomMessage)):
         target = event_or_message
-    elif hasattr(event_or_message, "message") and isinstance(event_or_message.message, (TelethonMessage, CustomMessage)):
+    elif hasattr(event_or_message, "message") and isinstance(
+        event_or_message.message, (TelethonMessage, CustomMessage)
+    ):
         target = event_or_message.message
     else:
         target = event_or_message
@@ -754,12 +797,36 @@ def enrich_message(event_or_message: Any, client: Any = None) -> Any:
 # Patch Friday helper methods and properties onto Telethon message classes so raw instances also have them
 for _cls in (TelethonMessage, CustomMessage):
     for _name in (
-        "edit_msg", "reply_msg", "handle_message", "reply_file", "reply_voice",
-        "reply_document", "delete_if_self", "delete_if_sudo", "user_args",
-        "user_input", "raw_user_input", "command_", "from_user", "chat",
-        "new_chat_members", "get_user", "extract_time", "copy", "strip_args",
-        "chat_id", "sender_id", "reply_to_message", "get_reply_message", "reply_to_top_id", "reply_to_msg_id",
-        "is_private", "is_group", "is_channel", "caption",
+        "edit_msg",
+        "reply_msg",
+        "handle_message",
+        "reply_file",
+        "reply_voice",
+        "reply_document",
+        "delete_if_self",
+        "delete_if_sudo",
+        "user_args",
+        "user_input",
+        "raw_user_input",
+        "command_",
+        "from_user",
+        "chat",
+        "new_chat_members",
+        "get_user",
+        "extract_time",
+        "copy",
+        "strip_args",
+        "chat_id",
+        "sender_id",
+        "reply_to_message",
+        "get_reply_message",
+        "reply_to_top_id",
+        "reply_to_msg_id",
+        "is_private",
+        "is_group",
+        "is_channel",
+        "caption",
+        "prefix",
     ):
         _val = getattr(Message, _name, None)
         if _val is not None and not hasattr(_cls, _name):

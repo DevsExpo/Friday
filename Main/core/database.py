@@ -1,24 +1,22 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
 from __future__ import annotations
 
-import os
 import re
 import uuid
 import sqlite3
 import asyncio
 import logging
-import contextlib
 import certifi
 import ujson as json
 from os import path
-from typing import Any, Dict, List, Optional, AsyncIterator, Callable, Union
+from typing import Any, Dict, List, Optional, Callable, Union
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase, AsyncIOMotorCollection
 from pymongo.errors import ServerSelectionTimeoutError, OperationFailure
 from Main.core.mongo_parser import PyMongoInstructionParser
@@ -146,6 +144,7 @@ class LocalDatabase:
             return {"ok": 1.0}
         if cmd == "dbstats":
             return {"dataSize": 0, "storageSize": 0}
+
     def close(self) -> None:
         self._sync_flush()
 
@@ -234,9 +233,7 @@ class LocalCollection:
         self._db.save()
         return InsertOneResult(doc_id)
 
-    async def update_one(
-        self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False
-    ) -> None:
+    async def update_one(self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False) -> None:
         for doc in self._col():
             if PyMongoInstructionParser.match_document(doc, query):
                 PyMongoInstructionParser.apply_update(doc, update)
@@ -250,9 +247,7 @@ class LocalCollection:
             self._col().append(new_doc)
             self._db.save()
 
-    async def update_many(
-        self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False
-    ) -> UpdateResult:
+    async def update_many(self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False) -> UpdateResult:
         matched = 0
         for doc in self._col():
             if PyMongoInstructionParser.match_document(doc, query):
@@ -312,9 +307,7 @@ class LocalCollection:
 
     async def delete_many(self, query: Dict[str, Any]) -> DeleteResult:
         original_len = len(self._col())
-        self._db.data[self._name] = [
-            d for d in self._col() if not PyMongoInstructionParser.match_document(d, query)
-        ]
+        self._db.data[self._name] = [d for d in self._col() if not PyMongoInstructionParser.match_document(d, query)]
         deleted_count = original_len - len(self._col())
         if deleted_count > 0:
             self._db.save()
@@ -410,9 +403,7 @@ class LocalCollectionCursor:
         return self
 
     def _get_processed(self) -> List[Dict[str, Any]]:
-        return _apply_cursor_transforms(
-            self._raw_docs, self._sort_key, self._sort_dir, self._skip, self._limit
-        )
+        return _apply_cursor_transforms(self._raw_docs, self._sort_key, self._sort_dir, self._skip, self._limit)
 
     def __aiter__(self) -> "LocalCollectionCursor":
         self._iter = iter(self._get_processed())
@@ -457,9 +448,7 @@ class AsyncDeferredCursor:
 
     async def _fetch_and_transform(self) -> List[Dict[str, Any]]:
         raw = await self._coro()
-        return _apply_cursor_transforms(
-            raw, self._sort_key, self._sort_dir, self._skip, self._limit
-        )
+        return _apply_cursor_transforms(raw, self._sort_key, self._sort_dir, self._skip, self._limit)
 
     def __aiter__(self) -> "AsyncDeferredCursor":
         return self
@@ -492,18 +481,14 @@ class SQLCollection:
 
     async def _ensure_table(self) -> None:
         if not self._init_done:
-            await self._db._execute(
-                f"CREATE TABLE IF NOT EXISTS {self._table} (_id TEXT PRIMARY KEY, data TEXT)"
-            )
+            await self._db._execute(f"CREATE TABLE IF NOT EXISTS {self._table} (_id TEXT PRIMARY KEY, data TEXT)")
             self._init_done = True
 
     async def find_one(self, query: Dict[str, Any] = {}) -> Optional[Dict[str, Any]]:
         await self._ensure_table()
         if "_id" in query and len(query) == 1:
             ph = "$1" if self._db.dialect in ("postgresql", "postgres") else "?"
-            rows = await self._db._fetchall(
-                f"SELECT data FROM {self._table} WHERE _id = {ph}", (str(query["_id"]),)
-            )
+            rows = await self._db._fetchall(f"SELECT data FROM {self._table} WHERE _id = {ph}", (str(query["_id"]),))
             if rows:
                 try:
                     return json.loads(rows[0][0])
@@ -567,9 +552,7 @@ class SQLCollection:
             )
         return InsertOneResult(doc_id)
 
-    async def update_one(
-        self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False
-    ) -> None:
+    async def update_one(self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False) -> None:
         await self._ensure_table()
         existing = await self.find_one(query)
         if existing:
@@ -592,9 +575,7 @@ class SQLCollection:
             updated = PyMongoInstructionParser.apply_update(new_doc, update)
             await self.insert_one(updated)
 
-    async def update_many(
-        self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False
-    ) -> UpdateResult:
+    async def update_many(self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False) -> UpdateResult:
         await self._ensure_table()
         cursor = self.find(query)
         matching = await cursor.to_list()
@@ -684,7 +665,7 @@ class SQLCollection:
         ids = [str(d.get("_id")) for d in matching if d.get("_id") is not None]
         if ids:
             if self._db.dialect in ("postgresql", "postgres"):
-                placeholders = [f"${i+1}" for i in range(len(ids))]
+                placeholders = [f"${i + 1}" for i in range(len(ids))]
                 await self._db._execute(
                     f"DELETE FROM {self._table} WHERE _id IN ({', '.join(placeholders)})",
                     tuple(ids),
@@ -852,25 +833,31 @@ class SQLDatabase:
                 cur = self._conn.cursor()
                 cur.execute(f"CREATE TABLE IF NOT EXISTS {table_name} (key TEXT PRIMARY KEY, val TEXT)")
                 doc = {"_id": str(key), "val": val}
-                cur.execute(f"INSERT OR REPLACE INTO {table_name} (key, val) VALUES (?, ?)", (str(key), json.dumps(doc)))
+                cur.execute(
+                    f"INSERT OR REPLACE INTO {table_name} (key, val) VALUES (?, ?)", (str(key), json.dumps(doc))
+                )
                 self._conn.commit()
             except Exception:
                 pass
 
     async def _execute(self, sql: str, params: tuple = ()) -> None:
         loop = asyncio.get_running_loop()
+
         def _run():
             cursor = self._conn.cursor()
             cursor.execute(sql, params)
             self._conn.commit()
+
         await loop.run_in_executor(None, _run)
 
     async def _fetchall(self, sql: str, params: tuple = ()) -> List[tuple]:
         loop = asyncio.get_running_loop()
+
         def _run():
             cursor = self._conn.cursor()
             cursor.execute(sql, params)
             return cursor.fetchall()
+
         return await loop.run_in_executor(None, _run)
 
     async def ping(self) -> bool:
@@ -887,11 +874,6 @@ class SQLDatabase:
     async def drop_collection(self, name: str) -> None:
         col = self.make_collection(name)
         await col.drop()
-
-    def close(self) -> None:
-        if self._conn:
-            with contextlib.suppress(Exception):
-                self._conn.close()
 
 
 class RedisCollection:
@@ -949,9 +931,7 @@ class RedisCollection:
         await client.hset(self._key, doc_id, json.dumps(doc))
         return InsertOneResult(doc_id)
 
-    async def update_one(
-        self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False
-    ) -> None:
+    async def update_one(self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False) -> None:
         existing = await self.find_one(query)
         if existing:
             doc_id = str(existing.get("_id"))
@@ -964,9 +944,7 @@ class RedisCollection:
             updated = PyMongoInstructionParser.apply_update(new_doc, update)
             await self.insert_one(updated)
 
-    async def update_many(
-        self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False
-    ) -> UpdateResult:
+    async def update_many(self, query: Dict[str, Any], update: Dict[str, Any], upsert: bool = False) -> UpdateResult:
         cursor = self.find(query)
         matching = await cursor.to_list()
         if matching:
@@ -1103,6 +1081,7 @@ class RedisDatabase:
 
     def __init__(self, uri: str, db_name: str = "Friday") -> None:
         import redis.asyncio as aioredis
+
         self.uri = uri
         self.db_name = db_name
         self._client = aioredis.from_url(uri, decode_responses=True)
@@ -1140,7 +1119,9 @@ class RedisDatabase:
         asyncio.create_task(self._client.close())
 
 
-def create_database(uri: Optional[str] = None, db_name: str = "Friday") -> Union[MongoDB, SQLDatabase, RedisDatabase, LocalDatabase]:
+def create_database(
+    uri: Optional[str] = None, db_name: str = "Friday"
+) -> Union[MongoDB, SQLDatabase, RedisDatabase, LocalDatabase]:
     """
     Universal Database Factory.
     Auto-detects backend from URI and returns a MongoDB-compatible async database:

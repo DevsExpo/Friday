@@ -1,16 +1,16 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
-import re
 from Main import Friday
 from Main.core.types.client import FridayTelegramClient as Client
 from Main.core.types.message import Message
-from Main.utils.custom_filters import create, Filter
+from Main.utils.custom_filters import create
+from Main.utils.ui_tokens import STATUS, ADMIN
 
 
 @Friday.register_on_cmd(
@@ -45,9 +45,7 @@ async def add_filter(c: Client, m: Message):
     added_count = 0
     updated_count = 0
     for kw in keywords:
-        res = await filters_db.find_one(
-            {"keyword": kw, "chat_id": chat_id, "client_id": my_id_}
-        )
+        res = await filters_db.find_one({"keyword": kw, "chat_id": chat_id, "client_id": my_id_})
         if res:
             await filters_db.update_one(
                 {"keyword": kw, "chat_id": chat_id, "client_id": my_id_},
@@ -55,9 +53,7 @@ async def add_filter(c: Client, m: Message):
             )
             updated_count += 1
         else:
-            await filters_db.insert_one(
-                {"keyword": kw, "chat_id": chat_id, "client_id": my_id_, "reply": reply_val}
-            )
+            await filters_db.insert_one({"keyword": kw, "chat_id": chat_id, "client_id": my_id_, "reply": reply_val})
             added_count += 1
         if hasattr(Friday.config, "FILTERS_CACHE"):
             Friday.config.FILTERS_CACHE.setdefault(my_id_, {}).setdefault(chat_id, {})[kw] = reply_val
@@ -68,8 +64,7 @@ async def add_filter(c: Client, m: Message):
         await ms.edit(template.format(keywords[0]))
     else:
         await ms.edit(
-            f"✅ <b>Bulk Filters Saved:</b> {kw_list}\n"
-            f"• <b>Added:</b> {added_count} | <b>Updated:</b> {updated_count}",
+            f"{STATUS.SUCCESS} <b>Bulk Filters Saved:</b> {kw_list}\n{STATUS.BULLET} <b>Added:</b> {added_count} | <b>Updated:</b> {updated_count}",
             parse_mode="html",
         )
 
@@ -97,9 +92,7 @@ async def remove_filter(c: Client, m: Message):
     removed = []
     not_found = []
     for kw in keywords:
-        res = await filters_db.find_one_and_delete(
-            {"keyword": kw, "chat_id": chat_id, "client_id": my_id_}
-        )
+        res = await filters_db.find_one_and_delete({"keyword": kw, "chat_id": chat_id, "client_id": my_id_})
         if res:
             removed.append(kw)
             if hasattr(Friday.config, "FILTERS_CACHE"):
@@ -114,9 +107,13 @@ async def remove_filter(c: Client, m: Message):
 
     res_parts = []
     if removed:
-        res_parts.append(f"🗑️ <b>Removed {len(removed)} filter(s):</b> {', '.join(f'<code>{r}</code>' for r in removed)}")
+        res_parts.append(
+            f"{ADMIN.TRASH} <b>Removed {len(removed)} filter(s):</b> {', '.join(f'<code>{r}</code>' for r in removed)}"
+        )
     if not_found:
-        res_parts.append(f"ℹ️ <b>Not found ({len(not_found)}):</b> {', '.join(f'<code>{n}</code>' for n in not_found)}")
+        res_parts.append(
+            f"{STATUS.INFO} <b>Not found ({len(not_found)}):</b> {', '.join(f'<code>{n}</code>' for n in not_found)}"
+        )
     await ms.edit("\n".join(res_parts) if res_parts else "No filters processed.", parse_mode="html")
 
 
@@ -137,7 +134,7 @@ async def listfilters(c: Client, m: Message):
     res = [item async for item in filters_db.find({"chat_id": chat_id, "client_id": my_id_})]
     if not res:
         return await ms.edit_msg("FILTER_LIST_EMPTY", string_args=(chat_id,))
-    to_reply = "".join(f"• {i['keyword']}\n" for i in res) + f"\n<b>TOTAL FILTERS: {len(res)}</b>"
+    to_reply = "".join(f"{STATUS.BULLET} {i['keyword']}\n" for i in res) + f"\n<b>TOTAL FILTERS: {len(res)}</b>"
     await ms.edit_msg("FILTER_LIST", string_args=(chat_id, to_reply))
 
 

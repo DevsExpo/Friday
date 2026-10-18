@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -12,7 +12,6 @@ from PIL import Image
 from io import BytesIO
 from Main import Friday
 from Main.core.types import FridayTelegramClient as Client
-from os import remove as rmv
 from bs4 import BeautifulSoup
 from json import loads as j_loads
 from time import perf_counter as pc
@@ -50,9 +49,7 @@ async def reverse_search_func_(c: Client, m: Message):
     if m.user_args and ("y" in m.user_args or str(m.user_args.y or "").lower() == "yandex"):
         img_search_url = await reverse_search_in_yandex(photo).parse()
         if not img_search_url:
-            return await msg.edit_msg(
-                "YANDEX_FAILED", string_args=("Results not found!")
-            )
+            return await msg.edit_msg("YANDEX_FAILED", string_args=("Results not found!"))
         end = pc()
         return await msg.edit_msg(
             "YANDEX_RESULT",
@@ -63,9 +60,7 @@ async def reverse_search_func_(c: Client, m: Message):
         img_r = reverse_search_in_google(photo)
         fetch_url = await img_r.reverse()
         if not fetch_url:
-            return await msg.edit_msg(
-                "<code>Given image not found on Google.</code>"
-            )
+            return await msg.edit_msg("<code>Given image not found on Google.</code>")
         if fetch_url.get("best_guess") and fetch_url.get("similar_images"):
             await msg.edit_msg("GOOGLE_LOOKING")
         else:
@@ -162,9 +157,7 @@ class reverse_search_in_google:
         soup = BeautifulSoup(str(source_s.text), "html.parser")
         for similar_image in soup.find_all("input", {"class": "gLFyf"}):
             if similar_image.get("value"):
-                url = "https://www.google.com/search?tbm=isch&q=" + u_parse.quote_plus(
-                    similar_image.get("value")
-                )
+                url = "https://www.google.com/search?tbm=isch&q=" + u_parse.quote_plus(similar_image.get("value"))
                 results["similar_images"] = url
         for best in soup.find_all("div", {"class": "r5a77d"}):
             results["best_guess"] = best.get_text()

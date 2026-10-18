@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -43,11 +43,7 @@ class _Essentials:
         time_suffix_list = ["s", "m", "h", "days"]
         while count < 4:
             count += 1
-            remainder, result = (
-                divmod(seconds, 60)
-                if count < 3
-                else divmod(seconds, 24)
-            )
+            remainder, result = divmod(seconds, 60) if count < 3 else divmod(seconds, 24)
             if seconds == 0 and remainder == 0:
                 break
             time_list.append(int(result))
@@ -86,9 +82,7 @@ class _Essentials:
         )
         return tmp[:-2] if tmp else "0s"
 
-    async def progress(
-        self, current, total, upload_or_download, start, message, file_name=None
-    ):
+    async def progress(self, current, total, upload_or_download, start, message, file_name=None):
         """Progress Bar For Showing Progress While Uploading / Downloading File"""
         now = time.time()
         diff = now - start

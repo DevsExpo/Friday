@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -10,9 +10,8 @@ from __future__ import annotations
 
 import re
 import time
-import json
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple
 
 logger = logging.getLogger("friday.mongo_parser")
 
@@ -317,7 +316,8 @@ class PyMongoInstructionParser:
                 if isinstance(lst, list):
                     if isinstance(val, dict):
                         doc[k] = [
-                            x for x in lst
+                            x
+                            for x in lst
                             if not (isinstance(x, dict) and PyMongoInstructionParser.match_document(x, val))
                         ]
                     else:
@@ -343,9 +343,7 @@ class PyMongoInstructionParser:
         return doc
 
     @staticmethod
-    def to_sql_where(
-        query: Dict[str, Any], dialect: str = "sqlite"
-    ) -> Tuple[str, List[Any]]:
+    def to_sql_where(query: Dict[str, Any], dialect: str = "sqlite") -> Tuple[str, List[Any]]:
         """
         Translate a MongoDB query into a safe parameterized SQL WHERE clause
         for SQLite or PostgreSQL.

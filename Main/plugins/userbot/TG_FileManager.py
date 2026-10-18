@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -60,7 +60,11 @@ async def upload_files_to_telegram(c, m: Message):
     input_ = m.user_input.strip()
     rm = m.reply_to_message or (await m.get_reply_message() if hasattr(m, "get_reply_message") else None)
     msg_id = rm.id if rm else m.id
-    thumb = "./temp/thumb.jpg" if os.path.exists("./temp/thumb.jpg") else ("./cache/thumb.jpg" if os.path.exists("./cache/thumb.jpg") else None)
+    thumb = (
+        "./temp/thumb.jpg"
+        if os.path.exists("./temp/thumb.jpg")
+        else ("./cache/thumb.jpg" if os.path.exists("./cache/thumb.jpg") else None)
+    )
     if not os.path.exists(input_) or not os.path.isfile(input_):
         return await msg.edit_msg("404_FILE_NOT_FOUND")
 

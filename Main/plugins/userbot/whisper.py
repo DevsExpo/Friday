@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -13,6 +13,7 @@ from telethon import errors
 from Main import Friday
 from Main.core.types.client import FridayTelegramClient as Client
 from Main.core.types.message import Message
+from Main.utils.ui_tokens import STATUS
 
 logger = logging.getLogger("friday.whisper")
 
@@ -73,6 +74,7 @@ async def whisper_cmd(c: Client, m: Message):
     except errors.BotInlineDisabledError:
         try:
             from Main.internals.set_inline import set_inline_in_botfather
+
             await set_inline_in_botfather(c)
             await asyncio.sleep(1)
             results = await c.get_inline_bot_results(Friday.bot_info.username, query_str)
@@ -85,4 +87,4 @@ async def whisper_cmd(c: Client, m: Message):
         return await m.handle_message("WHISPER_NO_INLINE_PERM")
     except Exception as exc:
         logger.error(f"Whisper command failed: {exc}")
-        return await m.handle_message(f"❌ Whisper failed: <code>{exc}</code>")
+        return await m.handle_message(f"{STATUS.ERROR} Whisper failed: <code>{exc}</code>")

@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -11,6 +11,7 @@ from telethon import utils
 from Main import Friday
 from Main.core.types.client import FridayTelegramClient as Client
 from Main.core.types.message import Message
+from Main.utils.ui_tokens import STATUS, ADMIN
 
 
 async def resolve_chat_id(c: Client, target: str) -> Optional[int]:
@@ -22,7 +23,7 @@ async def resolve_chat_id(c: Client, target: str) -> Optional[int]:
     # Strip URL formatting
     for p in ("https://t.me/", "http://t.me/", "t.me/"):
         if target.startswith(p):
-            target = target[len(p):]
+            target = target[len(p) :]
             break
     target = target.rstrip("/")
     if not target:
@@ -83,11 +84,17 @@ async def bcast_add(c: Client, m: Message):
 
     res_parts = []
     if added:
-        res_parts.append(f"✅ <b>Added {len(added)} chat(s):</b> {', '.join(f'<code>{a}</code>' for a in added)}")
+        res_parts.append(
+            f"{STATUS.SUCCESS} <b>Added {len(added)} chat(s):</b> {', '.join(f'<code>{a}</code>' for a in added)}"
+        )
     if already_in:
-        res_parts.append(f"ℹ️ <b>Already in database ({len(already_in)}):</b> {', '.join(f'<code>{a}</code>' for a in already_in)}")
+        res_parts.append(
+            f"{STATUS.INFO} <b>Already in database ({len(already_in)}):</b> {', '.join(f'<code>{a}</code>' for a in already_in)}"
+        )
     if failed:
-        res_parts.append(f"❌ <b>Failed to resolve ({len(failed)}):</b> {', '.join(f'<code>{f}</code>' for f in failed)}")
+        res_parts.append(
+            f"{STATUS.ERROR} <b>Failed to resolve ({len(failed)}):</b> {', '.join(f'<code>{f}</code>' for f in failed)}"
+        )
 
     await msg.edit("\n".join(res_parts) if res_parts else "No chats processed.", parse_mode="html")
 
@@ -129,11 +136,17 @@ async def bcast_remove(c: Client, m: Message):
 
     res_parts = []
     if deleted:
-        res_parts.append(f"🗑️ <b>Deleted {len(deleted)} chat(s):</b> {', '.join(f'<code>{d}</code>' for d in deleted)}")
+        res_parts.append(
+            f"{ADMIN.TRASH} <b>Deleted {len(deleted)} chat(s):</b> {', '.join(f'<code>{d}</code>' for d in deleted)}"
+        )
     if not_found:
-        res_parts.append(f"ℹ️ <b>Not in database ({len(not_found)}):</b> {', '.join(f'<code>{n}</code>' for n in not_found)}")
+        res_parts.append(
+            f"{STATUS.INFO} <b>Not in database ({len(not_found)}):</b> {', '.join(f'<code>{n}</code>' for n in not_found)}"
+        )
     if failed:
-        res_parts.append(f"❌ <b>Failed to resolve ({len(failed)}):</b> {', '.join(f'<code>{f}</code>' for f in failed)}")
+        res_parts.append(
+            f"{STATUS.ERROR} <b>Failed to resolve ({len(failed)}):</b> {', '.join(f'<code>{f}</code>' for f in failed)}"
+        )
 
     await msg.edit("\n".join(res_parts) if res_parts else "No chats processed.", parse_mode="html")
 
@@ -166,9 +179,9 @@ async def broadcast(c: Client, m: Message):
                 success += 1
             except Exception:
                 err += 1
-        res = f"📢 Broadcasted to <code>{success}</code> specified chat(s) (errors: <code>{err}</code>)"
+        res = f"{ADMIN.BROADCAST} Broadcasted to <code>{success}</code> specified chat(s) (errors: <code>{err}</code>)"
         if failed_resolve:
-            res += f"\n❌ Unresolved: {', '.join(f'<code>{f}</code>' for f in failed_resolve)}"
+            res += f"\n{STATUS.ERROR} Unresolved: {', '.join(f'<code>{f}</code>' for f in failed_resolve)}"
         return await msg.edit(res, parse_mode="html")
 
     # Otherwise broadcast to all saved chats in DB

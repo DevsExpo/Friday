@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -92,9 +92,7 @@ class Paste:
             available_functions = [
                 getattr(self, m)
                 for m in dir(self)
-                if not m.startswith("__")
-                and m.startswith("to_")
-                and callable(getattr(self, m))
+                if not m.startswith("__") and m.startswith("to_") and callable(getattr(self, m))
             ]
             while paste_url is None and available_functions:
                 _ = random.choice(available_functions)
@@ -110,11 +108,13 @@ class Paste:
 
     @property
     def all_bins(self) -> List[str]:
-        return sorted([
-            m.removeprefix("to_")
-            for m in dir(self)
-            if not m.startswith("__") and m.startswith("to_") and callable(getattr(self, m))
-        ])
+        return sorted(
+            [
+                m.removeprefix("to_")
+                for m in dir(self)
+                if not m.startswith("__") and m.startswith("to_") and callable(getattr(self, m))
+            ]
+        )
 
     def __repr__(self) -> str:
         return f"Paste(text={self.text}, title={self.title}, author={self.author}, file_ext={self.file_ext})"

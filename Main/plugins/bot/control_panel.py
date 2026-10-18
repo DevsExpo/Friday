@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -13,6 +13,7 @@ from telethon import custom
 from Main import Friday
 from Main.utils.custom_filters import filters
 from Main.utils.inline_helper import is_owner, is_owner_cb, send_inline_widget
+from Main.utils.ui_tokens import ADMIN, INDICATOR, NAV, STATUS
 
 
 def _get_readable_time(seconds: int) -> str:
@@ -46,34 +47,34 @@ async def _render_main_panel():
 
     db_obj = getattr(Friday, "db", None)
     if db_obj is None:
-        db_type = "🔴 None"
+        db_type = f"{INDICATOR.RED} None"
     else:
         cls_name = db_obj.__class__.__name__
         if "Mongo" in cls_name:
-            db_type = "🟢 MongoDB (NoSQL)"
+            db_type = f"{INDICATOR.GREEN} MongoDB (NoSQL)"
         elif "SQL" in cls_name:
             dialect = getattr(db_obj, "dialect", "sql").title()
-            db_type = f"🟢 SQL ({dialect})"
+            db_type = f"{INDICATOR.GREEN} SQL ({dialect})"
         elif "Local" in cls_name:
-            db_type = "🟡 Local JSON"
+            db_type = f"{INDICATOR.YELLOW} Local JSON"
         elif "Redis" in cls_name:
-            db_type = "🟢 Redis"
+            db_type = f"{INDICATOR.GREEN} Redis"
         else:
-            db_type = f"🟢 {cls_name}"
+            db_type = f"{INDICATOR.GREEN} {cls_name}"
 
     pm_sts = await Friday.config.get_pm_sts()
-    pm_badge = "🟢 Enabled" if pm_sts else "🔴 Disabled"
+    pm_badge = f"{INDICATOR.GREEN} Enabled" if pm_sts else f"{INDICATOR.RED} Disabled"
 
     pbar_sts = await Friday.config.get_progress_bar_sts()
-    pbar_badge = "🟢 Enabled" if pbar_sts else "🔴 Disabled (Clean)"
+    pbar_badge = f"{INDICATOR.GREEN} Enabled" if pbar_sts else f"{INDICATOR.RED} Disabled (Clean)"
 
     clients_count = len(getattr(Friday, "clients", []))
     prefix = getattr(Friday, "user_command_handler", ".")
     ver = getattr(Friday, "__version__", "0.2.0")
 
     text = (
-        f"⚡ <b>Friday Control Center v{ver}</b>\n\n"
-        f"• <b>Status:</b> 🟢 Operational\n"
+        f"{STATUS.PROCESSING} <b>Friday Control Center v{ver}</b>\n\n"
+        f"• <b>Status:</b> {INDICATOR.GREEN} Operational\n"
         f"• <b>Uptime:</b> <code>{uptime}</code>\n"
         f"• <b>Clients Active:</b> <code>{clients_count} session(s)</code>\n"
         f"• <b>Database:</b> <code>{db_type}</code>\n"
@@ -86,27 +87,27 @@ async def _render_main_panel():
 
     buttons = [
         [
-            custom.Button.inline("🛡️ PM Security", b"panel_toggle_pm"),
-            custom.Button.inline("📊 Progress Bar", b"panel_toggle_pbar"),
+            custom.Button.inline(f"{STATUS.SHIELD} PM Security", b"panel_toggle_pm"),
+            custom.Button.inline(f"{ADMIN.METRICS} Progress Bar", b"panel_toggle_pbar"),
         ],
         [
-            custom.Button.inline("➕ Add New Account / Session", b"twp_step2_session"),
-            custom.Button.inline("👥 Active Accounts", b"panel_sessions"),
+            custom.Button.inline(f"{ADMIN.PLUS} Add New Account / Session", b"twp_step2_session"),
+            custom.Button.inline(f"{ADMIN.USERS} Active Accounts", b"panel_sessions"),
         ],
         [
-            custom.Button.inline("📖 Help & Commands", b"help#_cat?cat=all&page=0"),
-            custom.Button.inline("🗄️ Database Info", b"panel_db_details"),
+            custom.Button.inline(f"{ADMIN.BOOK} Help & Commands", b"help#_cat?cat=all&page=0"),
+            custom.Button.inline(f"{ADMIN.DRAWER} Database Info", b"panel_db_details"),
         ],
         [
-            custom.Button.inline("🔄 Refresh Stats", b"panel_refresh"),
-            custom.Button.inline("⚡ Ping Check", b"panel_ping"),
+            custom.Button.inline(f"{ADMIN.RELOAD} Refresh Stats", b"panel_refresh"),
+            custom.Button.inline(f"{STATUS.PING} Ping Check", b"panel_ping"),
         ],
         [
-            custom.Button.inline("🏠 Main Menu", b"bot_start_menu"),
-            custom.Button.inline("🔄 Restart Friday", b"panel_restart"),
+            custom.Button.inline(f"{NAV.HOME_ICON} Main Menu", b"bot_start_menu"),
+            custom.Button.inline(f"{ADMIN.RELOAD} Restart Friday", b"panel_restart"),
         ],
         [
-            custom.Button.inline("✖ Close Panel", b"panel_close"),
+            custom.Button.inline(f"{NAV.CLOSE_ICON} Close Panel", b"panel_close"),
         ],
     ]
     return text, buttons
@@ -117,23 +118,15 @@ async def _safe_edit(target, text: str, buttons=None):
         await target.edit(text, buttons=buttons, parse_mode="html")
 
 
-# ==========================================
-# Assistant Bot Command: /panel or /settings
-# ==========================================
-
 @Friday.bot.on_message(filters.command(["panel", "settings", "control"]))
 async def bot_panel_cmd(c, m):
     sender_id = getattr(m, "sender_id", None) or getattr(getattr(m, "from_user", None), "id", None)
     if not is_owner(sender_id):
-        return await m.reply("⛔ Access Denied: Only the owner can access the Friday Control Panel.")
+        return await m.reply(f"{STATUS.DENIED} Access Denied: Only the owner can access the Friday Control Panel.")
 
     text, buttons = await _render_main_panel()
     await m.reply(text, buttons=buttons, parse_mode="html")
 
-
-# ==========================================
-# Userbot Command: .panel or .settings
-# ==========================================
 
 @Friday.register_on_cmd(
     ["panel", "settings", "control"],
@@ -156,14 +149,10 @@ async def userbot_panel_cmd(c, m):
     await _safe_edit(msg, text, buttons=buttons)
 
 
-# ==========================================
-# Interactive Callback Handler
-# ==========================================
-
 @Friday.bot.on_callback_query(pattern=r"^panel_")
 async def on_panel_callback(c, cq):
     if not is_owner_cb(cq):
-        return await cq.answer("⛔ Access denied: Owner only.", alert=True)
+        return await cq.answer(f"{STATUS.DENIED} Access denied: Owner only.", alert=True)
 
     data = cq.data.decode("utf-8") if isinstance(cq.data, bytes) else str(cq.data)
 
@@ -175,7 +164,7 @@ async def on_panel_callback(c, cq):
         return
 
     if data == "panel_refresh":
-        await cq.answer("🔄 Updating stats...")
+        await cq.answer(f"{ADMIN.RELOAD} Updating stats...")
         text, buttons = await _render_main_panel()
         await _safe_edit(cq, text, buttons=buttons)
         return
@@ -185,7 +174,7 @@ async def on_panel_callback(c, cq):
         new_val = not current
         await Friday.config.set_pm_sts(new_val)
         status_txt = "ENABLED" if new_val else "DISABLED"
-        await cq.answer(f"🛡️ PM Security is now {status_txt}!", alert=True)
+        await cq.answer(f"{STATUS.SHIELD} PM Security is now {status_txt}!", alert=True)
         text, buttons = await _render_main_panel()
         await _safe_edit(cq, text, buttons=buttons)
         return
@@ -195,7 +184,7 @@ async def on_panel_callback(c, cq):
         new_val = not current
         await Friday.config.set_progress_bar_sts(new_val)
         status_txt = "ENABLED (Live ASCII Bar)" if new_val else "DISABLED (Clean Mode, No FloodWaits)"
-        await cq.answer(f"📊 Upload Progress Bar is now {status_txt}!", alert=True)
+        await cq.answer(f"{ADMIN.METRICS} Upload Progress Bar is now {status_txt}!", alert=True)
         text, buttons = await _render_main_panel()
         await _safe_edit(cq, text, buttons=buttons)
         return
@@ -204,7 +193,7 @@ async def on_panel_callback(c, cq):
         start = time.perf_counter()
         await cq.answer("Measuring ping...")
         duration = round((time.perf_counter() - start) * 1000, 2)
-        await cq.answer(f"🏓 Pong! Response time: {duration}ms", alert=True)
+        await cq.answer(f"{STATUS.PING} Pong! Response time: {duration}ms", alert=True)
         return
 
     if data == "panel_db_details":
@@ -217,22 +206,22 @@ async def on_panel_callback(c, cq):
             details = f"• Backend: {cls}\n• Database Name: {name}"
             if hasattr(db_obj, "dialect"):
                 details += f"\n• Dialect: {db_obj.dialect}"
-        await cq.answer(f"🗄️ Database Info:\n{details}", alert=True)
+        await cq.answer(f"{ADMIN.DRAWER} Database Info:\n{details}", alert=True)
         return
 
     if data == "panel_sessions":
         clients = getattr(Friday, "clients", [])
         if not clients:
-            text = "👥 <b>Active Telegram Accounts:</b>\n\n<i>No userbot accounts currently connected (TWP Mode).</i>"
+            text = f"{ADMIN.USERS} <b>Active Telegram Accounts:</b>\n\n<i>No userbot accounts currently connected (TWP Mode).</i>"
             buttons = [
-                [custom.Button.inline("➕ Add Telegram Account", b"twp_step2_session")],
+                [custom.Button.inline(f"{ADMIN.PLUS} Add Telegram Account", b"twp_step2_session")],
                 [
-                    custom.Button.inline("🔙 Back to Panel", b"panel_refresh"),
-                    custom.Button.inline("🏠 Main Menu", b"bot_start_menu"),
+                    custom.Button.inline(f"{NAV.BACK_ICON} Back to Panel", b"panel_refresh"),
+                    custom.Button.inline(f"{NAV.HOME_ICON} Main Menu", b"bot_start_menu"),
                 ],
             ]
         else:
-            text = f"👥 <b>Active Telegram Accounts ({len(clients)} connected):</b>\n\n"
+            text = f"{ADMIN.USERS} <b>Active Telegram Accounts ({len(clients)} connected):</b>\n\n"
             buttons = []
             for i, cl in enumerate(clients):
                 user = getattr(cl, "myself", None)
@@ -243,16 +232,20 @@ async def on_panel_callback(c, cq):
                     text += f"<b>{i + 1}.</b> {name} ({uname})\n   • ID: <code>{uid}</code>\n"
                 else:
                     text += f"<b>{i + 1}.</b> User Client #{i + 1} (Active)\n"
-                buttons.append([
-                    custom.Button.inline(f"⚙️ Details #{i + 1}", f"panel_sess_info:{i}".encode()),
-                    custom.Button.inline(f"🚪 Logout #{i + 1}", f"panel_logout_prompt:{i}".encode()),
-                ])
-            text += "\n💡 <i>Each session operates independently and safely segregated. Tap below to inspect or disconnect.</i>"
-            buttons.append([custom.Button.inline("➕ Add Another Account", b"twp_step2_session")])
-            buttons.append([
-                custom.Button.inline("🔙 Back to Panel", b"panel_refresh"),
-                custom.Button.inline("🏠 Main Menu", b"bot_start_menu"),
-            ])
+                buttons.append(
+                    [
+                        custom.Button.inline(f"{STATUS.GEAR} Details #{i + 1}", f"panel_sess_info:{i}".encode()),
+                        custom.Button.inline(f"{ADMIN.DOOR} Logout #{i + 1}", f"panel_logout_prompt:{i}".encode()),
+                    ]
+                )
+            text += f"\n{ADMIN.LAMP} <i>Each session operates independently and safely segregated. Tap below to inspect or disconnect.</i>"
+            buttons.append([custom.Button.inline(f"{ADMIN.PLUS} Add Another Account", b"twp_step2_session")])
+            buttons.append(
+                [
+                    custom.Button.inline(f"{NAV.BACK_ICON} Back to Panel", b"panel_refresh"),
+                    custom.Button.inline(f"{NAV.HOME_ICON} Main Menu", b"bot_start_menu"),
+                ]
+            )
 
         await _safe_edit(cq, text, buttons=buttons)
         return
@@ -269,23 +262,29 @@ async def on_panel_callback(c, cq):
         name = getattr(user, "first_name", "User") if user else f"Client #{idx + 1}"
         username = f"@{user.username}" if (user and getattr(user, "username", None)) else "None"
         uid = getattr(user, "id", "Unknown") if user else "Unknown"
-        is_primary = "Primary Owner" if (user and getattr(Friday.config, "OWNER_ID", None) == user.id) else "Secondary Client"
+        is_primary = (
+            "Primary Owner" if (user and getattr(Friday.config, "OWNER_ID", None) == user.id) else "Secondary Client"
+        )
 
         text = (
-            f"⚙️ <b>Account #{idx + 1} Settings & Details</b>\n\n"
+            f"{STATUS.GEAR} <b>Account #{idx + 1} Settings & Details</b>\n\n"
             f"• <b>Name:</b> {name}\n"
             f"• <b>Username:</b> {username}\n"
             f"• <b>User ID:</b> <code>{uid}</code>\n"
             f"• <b>Data Center (DC):</b> DC <code>{dc_id}</code>\n"
             f"• <b>Role:</b> {is_primary}\n"
-            f"• <b>Connection Status:</b> 🟢 Online & Active\n\n"
+            f"• <b>Connection Status:</b> {INDICATOR.GREEN} Online & Active\n\n"
             "<i>This session is fully segregated and manages its own independent MTProto connection.</i>"
         )
         buttons = [
-            [custom.Button.inline(f"🚪 Logout & Disconnect Account #{idx + 1}", f"panel_logout_prompt:{idx}".encode())],
             [
-                custom.Button.inline("🔙 Back to Accounts List", b"panel_sessions"),
-                custom.Button.inline("🏠 Main Menu", b"bot_start_menu"),
+                custom.Button.inline(
+                    f"{ADMIN.DOOR} Logout & Disconnect Account #{idx + 1}", f"panel_logout_prompt:{idx}".encode()
+                )
+            ],
+            [
+                custom.Button.inline(f"{NAV.BACK_ICON} Back to Accounts List", b"panel_sessions"),
+                custom.Button.inline(f"{NAV.HOME_ICON} Main Menu", b"bot_start_menu"),
             ],
         ]
         await _safe_edit(cq, text, buttons=buttons)
@@ -302,15 +301,17 @@ async def on_panel_callback(c, cq):
         name = getattr(user, "first_name", f"Account #{idx + 1}") if user else f"Account #{idx + 1}"
 
         text = (
-            f"⚠️ <b>Confirm Logout for {name} (Account #{idx + 1})?</b>\n\n"
+            f"{STATUS.WARNING} <b>Confirm Logout for {name} (Account #{idx + 1})?</b>\n\n"
             "This will disconnect the Telethon userbot client and remove its session string from memory, "
             "configuration, and the database.\n\n"
             "Are you sure?"
         )
         buttons = [
             [
-                custom.Button.inline("✅ Yes, Disconnect & Logout", f"panel_logout_confirm:{idx}".encode()),
-                custom.Button.inline("❌ Cancel", b"panel_sessions"),
+                custom.Button.inline(
+                    f"{STATUS.SUCCESS} Yes, Disconnect & Logout", f"panel_logout_confirm:{idx}".encode()
+                ),
+                custom.Button.inline(f"{STATUS.ERROR} Cancel", b"panel_sessions"),
             ]
         ]
         await _safe_edit(cq, text, buttons=buttons)
@@ -326,23 +327,22 @@ async def on_panel_callback(c, cq):
         success = await Friday.remove_session(idx)
         if success:
             text = (
-                "✅ <b>Account Successfully Logged Out!</b>\n\n"
+                f"{STATUS.SUCCESS} <b>Account Successfully Logged Out!</b>\n\n"
                 f"Account #{idx + 1} has been disconnected and removed from the active instance and database."
             )
         else:
-            text = "❌ Failed to log out account: Index not found."
+            text = f"{STATUS.ERROR} Failed to log out account: Index not found."
 
         buttons = [
-            [custom.Button.inline("👥 View Remaining Accounts", b"panel_sessions")],
-            [custom.Button.inline("🔙 Back to Main Panel", b"panel_refresh")],
+            [custom.Button.inline(f"{ADMIN.USERS} View Remaining Accounts", b"panel_sessions")],
+            [custom.Button.inline(f"{NAV.BACK_ICON} Back to Main Panel", b"panel_refresh")],
         ]
         await _safe_edit(cq, text, buttons=buttons)
         return
 
     if data == "panel_restart":
-        await cq.answer("🔄 Restarting Friday instance...", alert=True)
-        await _safe_edit(cq, "🔄 <i>Restarting Friday instance now...</i>", buttons=None)
+        await cq.answer(f"{ADMIN.RELOAD} Restarting Friday instance...", alert=True)
+        await _safe_edit(cq, f"{ADMIN.RELOAD} <i>Restarting Friday instance now...</i>", buttons=None)
         if hasattr(Friday, "reboot"):
             await Friday.reboot(soft=False, last_msg=cq)
         return
-

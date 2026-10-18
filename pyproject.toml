@@ -8,7 +8,7 @@ version = "0.2.0"
 description = "A modern modular Telegram userbot and assistant framework powered by Telethon."
 readme = "README.md"
 requires-python = ">=3.10"
-license = "GPL-3.0-only"
+license = "AGPL-3.0-or-later"
 dependencies = [
     "telethon>=1.36.0",
     "cryptg>=0.4.0",

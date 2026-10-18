@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -10,11 +10,11 @@ import re
 import html
 import telethon
 from Main import Friday
-from typing import Optional
 from platform import python_version
 from Main.utils.custom_filters import filters
 from Main.core.decorators import log_errors, iuser_check
 from telethon import custom
+from Main.utils.ui_tokens import ADMIN, NAV, STATUS
 
 
 help_text = f"""<b><u>Friday Help Menu</u></b>
@@ -40,22 +40,26 @@ async def get_help_menu(category: str = "all", page: int = 0):
 
     cat_tabs = [
         custom.Button.inline(
-            f"• 📦 Main ({len(main_plugins)}) •" if category == "main" else f"📦 Main ({len(main_plugins)})",
+            f"• {ADMIN.PACKAGE} Main ({len(main_plugins)}) •"
+            if category == "main"
+            else f"{ADMIN.PACKAGE} Main ({len(main_plugins)})",
             b"help#_cat?cat=main&page=0",
         ),
         custom.Button.inline(
-            f"• 🧩 Loaded ({len(loaded_plugins)}) •" if category == "loaded" else f"🧩 Loaded ({len(loaded_plugins)})",
+            f"• {ADMIN.PLUGIN} Loaded ({len(loaded_plugins)}) •"
+            if category == "loaded"
+            else f"{ADMIN.PLUGIN} Loaded ({len(loaded_plugins)})",
             b"help#_cat?cat=loaded&page=0",
         ),
         custom.Button.inline(
-            f"• 🌐 All ({len(all_plugins)}) •" if category == "all" else f"🌐 All",
+            f"• {ADMIN.WEB} All ({len(all_plugins)}) •" if category == "all" else f"{ADMIN.WEB} All",
             b"help#_cat?cat=all&page=0",
         ),
     ]
 
     ikb = [
         custom.Button.inline(
-            f"{'📦' if Friday.get_plugin_category(p) == 'main' else '🧩'} {p.replace('_', ' ').title()}",
+            f"{ADMIN.PACKAGE if Friday.get_plugin_category(p) == 'main' else ADMIN.PLUGIN} {p.replace('_', ' ').title()}",
             f"help#{p}?cat={category}&page={page}".encode("utf-8"),
         )
         for p in target_plugins
@@ -90,11 +94,13 @@ async def get_help_menu(category: str = "all", page: int = 0):
         current_grid.append(page_buttons)
 
     # Append Control buttons & Close
-    current_grid.append([
-        custom.Button.inline("🏠 Main Menu", b"bot_start_menu"),
-        custom.Button.inline("⚙️ Settings", b"panel_refresh"),
-        custom.Button.inline("✖ Close", b"close_help"),
-    ])
+    current_grid.append(
+        [
+            custom.Button.inline(f"{NAV.HOME_ICON} Main Menu", b"bot_start_menu"),
+            custom.Button.inline(f"{STATUS.GEAR} Settings", b"panel_refresh"),
+            custom.Button.inline(NAV.CLOSE, b"close_help"),
+        ]
+    )
     return current_grid
 
 
@@ -102,15 +108,15 @@ async def get_help_menu(category: str = "all", page: int = 0):
 async def get_plugin_data(plugin: str, page: int = 0, category: str = "all"):
     p_name = plugin.lower()
     cat = Friday.get_plugin_category(p_name)
-    badge = "📦 Core / Main Plugin" if cat == "main" else "🧩 Loaded / Extra Plugin"
+    badge = f"{ADMIN.PACKAGE} Core / Main Plugin" if cat == "main" else f"{ADMIN.PLUGIN} Loaded / Extra Plugin"
     text = (
         f"<b>Help for</b> <code>{p_name}</code>  <i>[{badge}]</i>\n\n"
         f"{Friday._command_help_message_data[p_name].strip()}"
     )
     buttons = [
         [
-            custom.Button.inline("🔙 Back", f"help#_page?cat={category}&page={page}".encode("utf-8")),
-            custom.Button.inline("🏠 Main Menu", b"bot_start_menu"),
+            custom.Button.inline(NAV.BACK, f"help#_page?cat={category}&page={page}".encode("utf-8")),
+            custom.Button.inline(f"{NAV.HOME_ICON} Main Menu", b"bot_start_menu"),
         ]
     ]
     return text, buttons
@@ -121,11 +127,11 @@ async def get_plugin_data(plugin: str, page: int = 0, category: str = "all"):
 @iuser_check
 async def close_help(c, cq):
     await cq.edit(
-        "<b>Help Menu Closed 🔐</b>",
+        f"<b>Help Menu Closed {STATUS.KEY}</b>",
         buttons=[
             [
                 custom.Button.inline("Re-Open", b"re_open"),
-                custom.Button.inline("🏠 Main Menu", b"bot_start_menu"),
+                custom.Button.inline(f"{NAV.HOME_ICON} Main Menu", b"bot_start_menu"),
             ]
         ],
         parse_mode="html",
@@ -249,7 +255,7 @@ async def bot_help_message_handler(c, m):
     sender_id = getattr(m, "sender_id", None)
     if not sender_id or sender_id not in Friday.auth_users:
         if getattr(m, "is_private", False):
-            return await m.reply("⚠️ <i>You are not authorized to use this bot.</i>", parse_mode="html")
+            return await m.reply(f"{STATUS.WARNING} <i>You are not authorized to use this bot.</i>", parse_mode="html")
         return
 
     raw_text = getattr(m, "text", "") or getattr(m, "raw_text", "") or ""

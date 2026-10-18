@@ -1,23 +1,20 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
 import re
 import unittest
-import asyncio
 import time
 from typing import Any, Dict
 
 from Main.core.mongo_parser import PyMongoInstructionParser, _safe_eq, _get_nested, _set_nested, _unset_nested
 from Main.core.database import (
     SQLDatabase,
-    SQLCollection,
     LocalDatabase,
-    LocalCollection,
     create_database,
     DeleteResult,
     InsertOneResult,
@@ -315,7 +312,6 @@ class TestDatabaseAsyncOperations(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(db_default.dialect, "sqlite")
         db_default.close()
 
-
     async def test_all_plugin_database_patterns(self):
         """Simulate the exact database operation patterns across all Friday plugins."""
         # 1. welcome.py pattern
@@ -429,7 +425,5 @@ class TestDatabaseAsyncOperations(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await whisper_col.find_one({"_id": "whisper_burn_999"}))
 
 
-
 if __name__ == "__main__":
     unittest.main()
-

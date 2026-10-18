@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -12,7 +12,7 @@ import inspect
 import asyncio
 import functools
 import logging
-from typing import Any, Callable, Optional, Tuple, Type, Union
+from typing import Any, Callable, Optional, Tuple, Type
 
 logger = logging.getLogger("friday.suppress")
 
@@ -20,18 +20,18 @@ logger = logging.getLogger("friday.suppress")
 class suppress_error:
     """
     Safe error suppression context manager and decorator.
-    
+
     Acts like `contextlib.suppress(*exceptions)`, but provides informative logging
     instead of swallowing critical failures blindly, preserving debuggability
     across all Friday modules and plugins.
-    
+
     Usage:
         with suppress_error(msg="Deleting cache file"):
             os.remove(path)
-            
+
         async with suppress_error(Exception, level=logging.WARNING, msg="Sending unafk notification"):
             await m.respond("I am back!")
-            
+
         @suppress_error(log=True, msg="Failed to parse custom filter")
         def check_filter(event):
             ...
@@ -86,16 +86,20 @@ class suppress_error:
 
     def __call__(self, func: Callable[..., Any]) -> Callable[..., Any]:
         if inspect.iscoroutinefunction(func):
+
             @functools.wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 async with self:
                     return await func(*args, **kwargs)
+
             return async_wrapper
         else:
+
             @functools.wraps(func)
             def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 with self:
                     return func(*args, **kwargs)
+
             return sync_wrapper
 
 

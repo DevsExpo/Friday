@@ -1,19 +1,20 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
 import re
 import time
 import uuid
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Union
 from Main import Friday
 from Main.core.decorators import log_errors
 from Main.utils.custom_filters import filters
 from Main.utils.suppress import suppress_error
+from Main.utils.ui_tokens import STATUS
 from telethon import custom
 
 
@@ -73,7 +74,7 @@ async def whisper(c, iq):
     w_text = Friday.get_string("WHISPER", user=user_trail) or (
         f"<b>A Secret Whisper Has Been Sent For {user_trail}</b>\n\n"
         "Click below to read message!\n"
-        "🔒 <i>Self-Destruct: Once the recipient reads this message, it is permanently deleted from the database.</i>"
+        f"{STATUS.LOCK} <i>Self-Destruct: Once the recipient reads this message, it is permanently deleted from the database.</i>"
     )
     result = builder.article(
         title=f"Whisper to {user_trail}",
@@ -104,7 +105,7 @@ async def whisper_callback(c, cq):
             pass
 
     if not msg_dict:
-        return await cq.answer("🔒 This whisper has already been read and self-destructed.", alert=True)
+        return await cq.answer(f"{STATUS.LOCK} This whisper has already been read and self-destructed.", alert=True)
 
     # 2. Check 1-Day TTL expiration
     expires_at = msg_dict.get("expires_at", 0)
@@ -114,7 +115,7 @@ async def whisper_callback(c, cq):
         if Friday.db is not None:
             with suppress_error():
                 await Friday.db["WHISPERS"].delete_one({"_id": _id})
-        return await cq.answer("⏳ This whisper has expired (max 1 day TTL).", alert=True)
+        return await cq.answer(f"{STATUS.WAIT} This whisper has expired (max 1 day TTL).", alert=True)
 
     user_id_or_username = _parse_target_user(msg_dict.get("user"))
     MSG = msg_dict.get("msg")
@@ -143,7 +144,7 @@ async def whisper_callback(c, cq):
     # If sender/owner previews it before the recipient, don't burn it yet
     if is_sender_or_owner and not is_recipient:
         return await cq.answer(f"[Whisper Sent by You]\n{MSG}", alert=True)
-        
+
     await cq.answer(MSG, alert=True)
 
     MSGS_DICT.pop(_id, None)
@@ -152,9 +153,13 @@ async def whisper_callback(c, cq):
             await Friday.db["WHISPERS"].delete_one({"_id": _id})
 
     with suppress_error(msg="Editing destroyed whisper message"):
-        recipient_tag = f"@{cq.sender.username}" if hasattr(cq, "sender") and getattr(cq.sender, "username", None) else "The recipient"
+        recipient_tag = (
+            f"@{cq.sender.username}"
+            if hasattr(cq, "sender") and getattr(cq.sender, "username", None)
+            else "The recipient"
+        )
         await cq.edit(
-            f"🔒 <b>Secret Whisper Destroyed</b>\n\n"
+            f"{STATUS.LOCK} <b>Secret Whisper Destroyed</b>\n\n"
             f"<i>{recipient_tag} has read this whisper. The secret has been permanently wiped from the database.</i>",
             buttons=None,
             parse_mode="html",

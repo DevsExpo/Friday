@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -13,7 +13,6 @@ import base64
 import psutil
 import socket
 import platform
-import contextlib
 from Main import Friday
 from Main.utils.suppress import suppress_error
 from os import remove as rmv
@@ -68,10 +67,7 @@ def get_info(value=False) -> tuple:
         cpu_freq = f"{round(cpu_freq, 2)}MHz"
     du = psutil.disk_usage(os.getcwd())
     psutil.disk_io_counters()
-    disk = (
-        f"{Essentials.humanbytes(du.used)}/{Essentials.humanbytes(du.total)}"
-        f"({du.percent}%)"
-    )
+    disk = f"{Essentials.humanbytes(du.used)}/{Essentials.humanbytes(du.total)}({du.percent}%)"
     cpu_len = len(psutil.Process().cpu_affinity())
     return (
         splatform,

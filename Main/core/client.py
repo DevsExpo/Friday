@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -18,11 +18,9 @@ import yaml
 import signal
 import shlex
 import random
-import shutil
 import asyncio
 import inspect
 import logging
-import aiofiles
 import importlib
 import traceback
 import contextlib
@@ -35,21 +33,20 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import httpx
 import telethon
-from telethon import events, errors, functions, types
+from telethon import events, errors, types
 from telethon.sessions import StringSession, MemorySession
 from cachetools import TTLCache
 
 from Main.core.cache import Cache
 from Main.utils.paste import Paste
 from ..utils._updater import Updater
-from .config import Config, BaseConfig
+from .config import Config
 from ..utils.suppress import suppress_error, safe_suppress, suppress
 from .database import MongoDB, LocalDatabase, SQLDatabase, create_database
 from .plugin_manager import PluginManager
 from .types.client import FridayTelegramClient
-from .types.message import Message, enrich_message
-from ..utils.custom_filters import user_filters, filters as default_filters, Filter
-from ..utils.startup_helpers import concatenate
+from .types.message import enrich_message
+from ..utils.custom_filters import filters as default_filters, Filter
 from Main.utils.heroku_ import prepare_heroku_url
 from ..utils.multi_lang_helpers import get_all_files_in_path
 from ..utils.command import resolve_command
@@ -58,12 +55,29 @@ logger = logging.getLogger("Friday")
 
 # Commands that are restricted to the owner only and blocked from sudo users.
 # Centralised here to avoid copy-paste drift across the codebase.
-_OWNER_ONLY_CMDS: frozenset = frozenset({
-    "subcategories",
-    "eval", "exec", "bash", "sh", "terminal", "py", "install",
-    "addsudo", "rmsudo", "dpfs", "rmdfs",
-    "restart", "reload", "shutdown", "update", "add_session", "session", "token",
-})
+_OWNER_ONLY_CMDS: frozenset = frozenset(
+    {
+        "subcategories",
+        "eval",
+        "exec",
+        "bash",
+        "sh",
+        "terminal",
+        "py",
+        "install",
+        "addsudo",
+        "rmsudo",
+        "dpfs",
+        "rmdfs",
+        "restart",
+        "reload",
+        "shutdown",
+        "update",
+        "add_session",
+        "session",
+        "token",
+    }
+)
 
 
 class BotWrapper:
@@ -89,6 +103,7 @@ class BotWrapper:
             if self._friday._raw_bot is not None:
                 self._friday._register_bot_handler("message", custom_filter, func)
             return func
+
         return decorator
 
     def on_callback_query(self, custom_filter: Optional[Any] = None, pattern: Optional[Any] = None, *args, **kwargs):
@@ -103,6 +118,7 @@ class BotWrapper:
             if self._friday._raw_bot is not None:
                 self._friday._register_bot_handler("callback_query", custom_filter, func)
             return func
+
         return decorator
 
     def on_inline_query(self, custom_filter: Optional[Any] = None, pattern: Optional[Any] = None, *args, **kwargs):
@@ -117,6 +133,7 @@ class BotWrapper:
             if self._friday._raw_bot is not None:
                 self._friday._register_bot_handler("inline_query", custom_filter, func)
             return func
+
         return decorator
 
     def on(self, event: Any = None):
@@ -125,6 +142,7 @@ class BotWrapper:
             if self._friday._raw_bot is not None:
                 self._friday._register_bot_handler("telethon_event", event, func)
             return func
+
         return decorator
 
 
@@ -242,6 +260,7 @@ class FridayClient:
     async def resolve_dns(self) -> None:
         try:
             import dns.resolver
+
             try:
                 dns.resolver.resolve("www.google.com")
             except Exception:
@@ -264,7 +283,9 @@ class FridayClient:
                 raise ConnectionError(f"{backend_name} did not respond to the ping command")
             self.log(f"Pinged {backend_name} successfully!")
         except Exception as e:
-            self.log(f"Database connection failed: {e}. Falling back to default SQLite database.", level=logging.WARNING)
+            self.log(
+                f"Database connection failed: {e}. Falling back to default SQLite database.", level=logging.WARNING
+            )
             self.db = SQLDatabase("sqlite:///friday.db", db_name="Friday", dialect="sqlite")
         self.app_url_ = await prepare_heroku_url()
 
@@ -273,6 +294,7 @@ class FridayClient:
         async def wrapper(*args, **kwargs):
             loop = asyncio.get_running_loop()
             return await loop.run_in_executor(self.executor, lambda: func_(*args, **kwargs))
+
         return wrapper
 
     def setup_localization_sync(self) -> None:
@@ -318,9 +340,15 @@ class FridayClient:
         if fmt_args is not None or kwargs:
             try:
                 if fmt_args is not None and kwargs:
-                    return str_ing.format(*fmt_args, **kwargs) if isinstance(fmt_args, (list, tuple)) else str_ing.format(fmt_args, **kwargs)
+                    return (
+                        str_ing.format(*fmt_args, **kwargs)
+                        if isinstance(fmt_args, (list, tuple))
+                        else str_ing.format(fmt_args, **kwargs)
+                    )
                 elif fmt_args is not None:
-                    return str_ing.format(*fmt_args) if isinstance(fmt_args, (list, tuple)) else str_ing.format(fmt_args)
+                    return (
+                        str_ing.format(*fmt_args) if isinstance(fmt_args, (list, tuple)) else str_ing.format(fmt_args)
+                    )
                 elif kwargs:
                     return str_ing.format(**kwargs)
             except Exception:
@@ -342,6 +370,7 @@ class FridayClient:
             if self.bot_mode and not bot_mode_unsupported and self._raw_bot is not None:
                 self._attach_handler_to_client(self._raw_bot, handler_info)
             return func
+
         return decorator
 
     def register_on_cmd(
@@ -477,7 +506,9 @@ class FridayClient:
                         if is_sudo and not is_owner:
                             # 1. Check disabled sudo plugins / commands
                             disabled = getattr(self, "disabled_sudo_plugin_list", []) or []
-                            if isinstance(disabled, (list, tuple, set)) and cmd_name in {str(x).lower() for x in disabled}:
+                            if isinstance(disabled, (list, tuple, set)) and cmd_name in {
+                                str(x).lower() for x in disabled
+                            }:
                                 return
                             if cmd_name in _OWNER_ONLY_CMDS or handler_entry.get("file_name") in _OWNER_ONLY_CMDS:
                                 return
@@ -496,7 +527,9 @@ class FridayClient:
                             if cmd_name in _OWNER_ONLY_CMDS or handler_entry.get("file_name") in _OWNER_ONLY_CMDS:
                                 return
                             disabled = getattr(self, "disabled_sudo_plugin_list", []) or []
-                            if isinstance(disabled, (list, tuple, set)) and cmd_name in {str(x).lower() for x in disabled}:
+                            if isinstance(disabled, (list, tuple, set)) and cmd_name in {
+                                str(x).lower() for x in disabled
+                            }:
                                 return
                         else:
                             return
@@ -521,7 +554,11 @@ class FridayClient:
                             if not reply and hasattr(event, "message") and hasattr(event.message, "get_reply_message"):
                                 reply = await event.message.get_reply_message()
                             if not reply and message.reply_to_msg_id:
-                                chat_target = getattr(message, "input_chat", None) or getattr(event, "input_chat", None) or message.chat_id
+                                chat_target = (
+                                    getattr(message, "input_chat", None)
+                                    or getattr(event, "input_chat", None)
+                                    or message.chat_id
+                                )
                                 reply = await client.get_messages(chat_target, ids=message.reply_to_msg_id)
                             if reply:
                                 message.reply_to_message = enrich_message(reply, client)
@@ -587,15 +624,21 @@ class FridayClient:
                         if not reply and hasattr(event, "message") and hasattr(event.message, "get_reply_message"):
                             reply = await event.message.get_reply_message()
                         if not reply and message.reply_to_msg_id:
-                            chat_target = getattr(message, "input_chat", None) or getattr(event, "input_chat", None) or message.chat_id
+                            chat_target = (
+                                getattr(message, "input_chat", None)
+                                or getattr(event, "input_chat", None)
+                                or message.chat_id
+                            )
                             reply = await client.get_messages(chat_target, ids=message.reply_to_msg_id)
                         if reply:
                             message.reply_to_message = enrich_message(reply, client)
 
                 try:
                     await func(client, message)
-                except Exception as exc:
-                    logger.error(f"Custom handler exception in '{getattr(func, '__name__', 'func')}':\n{traceback.format_exc()}")
+                except Exception:
+                    logger.error(
+                        f"Custom handler exception in '{getattr(func, '__name__', 'func')}':\n{traceback.format_exc()}"
+                    )
 
             client.add_event_handler(custom_callback, events.NewMessage())
 
@@ -604,6 +647,7 @@ class FridayClient:
             return
 
         if handler_type == "message":
+
             async def cb(event: events.NewMessage.Event):
                 msg = enrich_message(event, self._raw_bot)
                 if custom_filter is not None:
@@ -622,18 +666,24 @@ class FridayClient:
                         if not reply and hasattr(event, "message") and hasattr(event.message, "get_reply_message"):
                             reply = await event.message.get_reply_message()
                         if not reply and msg.reply_to_msg_id:
-                            chat_target = getattr(msg, "input_chat", None) or getattr(event, "input_chat", None) or msg.chat_id
+                            chat_target = (
+                                getattr(msg, "input_chat", None) or getattr(event, "input_chat", None) or msg.chat_id
+                            )
                             reply = await self._raw_bot.get_messages(chat_target, ids=msg.reply_to_msg_id)
                         if reply:
                             msg.reply_to_message = enrich_message(reply, self._raw_bot)
 
                 try:
                     await func(self._raw_bot, msg)
-                except Exception as exc:
-                    logger.error(f"Bot handler exception in '{getattr(func, '__name__', 'func')}':\n{traceback.format_exc()}")
+                except Exception:
+                    logger.error(
+                        f"Bot handler exception in '{getattr(func, '__name__', 'func')}':\n{traceback.format_exc()}"
+                    )
+
             self._raw_bot.add_event_handler(cb, events.NewMessage())
 
         elif handler_type == "callback_query":
+
             async def cq_cb(event: events.CallbackQuery.Event):
                 setattr(event, "from_user", types.User(id=event.sender_id) if event.sender_id else None)
                 if custom_filter is not None and not await custom_filter(self._raw_bot, event):
@@ -649,9 +699,11 @@ class FridayClient:
                         await func(self._raw_bot, event)
                     except TypeError:
                         await func(event)
+
             self._raw_bot.add_event_handler(cq_cb, events.CallbackQuery())
 
         elif handler_type == "inline_query":
+
             async def iq_cb(event: events.InlineQuery.Event):
                 setattr(event, "from_user", types.User(id=event.sender_id) if event.sender_id else None)
                 if custom_filter is not None and not await custom_filter(self._raw_bot, event):
@@ -667,6 +719,7 @@ class FridayClient:
                         await func(self._raw_bot, event)
                     except TypeError:
                         await func(event)
+
             self._raw_bot.add_event_handler(iq_cb, events.InlineQuery())
 
         elif handler_type == "telethon_event":
@@ -787,7 +840,9 @@ class FridayClient:
                         self.ourselves.append(c.myself)
                     for h_info in self._pending_handlers:
                         self._attach_handler_to_client(c, h_info)
-                    self.log(f"[{idx + 1}/{len(string_sessions)}] User session loaded: {getattr(c.myself, 'first_name', '')}")
+                    self.log(
+                        f"[{idx + 1}/{len(string_sessions)}] User session loaded: {getattr(c.myself, 'first_name', '')}"
+                    )
                 except Exception as err:
                     self.log(f"Failed loading session {idx + 1}: {err}", level=logging.ERROR)
 
@@ -874,7 +929,9 @@ class FridayClient:
         """Compatibility entry point used by the updater."""
         await self.reboot(**kwargs)
 
-    async def load_from_directory(self, path_pattern: str, log: bool = True, msg: Any = None, category: Optional[str] = None) -> None:
+    async def load_from_directory(
+        self, path_pattern: str, log: bool = True, msg: Any = None, category: Optional[str] = None
+    ) -> None:
         helper_scripts = glob.glob(path_pattern, recursive=True)
         if not helper_scripts:
             return
@@ -946,6 +1003,7 @@ class FridayClient:
         if load_xtra:
             try:
                 from Main.core.fpm_env_setup import sync_xtra_plugins_repos
+
                 loop = asyncio.get_running_loop()
                 await loop.run_in_executor(None, sync_xtra_plugins_repos)
             except Exception as e:
@@ -1047,7 +1105,9 @@ class FridayClient:
 
                     if formatted_examples:
                         if len(formatted_examples) == 1:
-                            self._command_help_message_data[p_name] += f"<b>Example:</b> <code>{html.escape(formatted_examples[0])}</code>\n"
+                            self._command_help_message_data[p_name] += (
+                                f"<b>Example:</b> <code>{html.escape(formatted_examples[0])}</code>\n"
+                            )
                         else:
                             self._command_help_message_data[p_name] += "<b>Examples:</b>\n"
                             for fex in formatted_examples:
@@ -1202,5 +1262,6 @@ class FridayClient:
             else:
                 restart_args = [sys.executable, *sys.argv]
             os.execv(sys.executable, restart_args)
+
 
 AltruixClient = FridayClient

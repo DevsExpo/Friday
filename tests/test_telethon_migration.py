@@ -1,17 +1,13 @@
 import asyncio
 import ast
 import inspect
-import os
 import pytest
-import re
-from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from telethon import errors, events, functions, types
 from telethon.sessions import StringSession
-from telethon.tl.custom.message import Message as BaseTelethonMessage
 
 from Main.core.types.client import FridayTelegramClient
-from Main.core.types.message import Message, UserWrapper, ChatWrapper, enrich_message
+from Main.core.types.message import Message, UserWrapper
 from Main.utils.custom_filters import Filter, Filters, user_filters
 from Main.core.config import Config
 
@@ -57,14 +53,10 @@ def test_raw_telethon_calls_match_installed_api():
             params = signature.parameters
             invalid = [keyword.arg for keyword in call.keywords if keyword.arg and keyword.arg not in params]
             if invalid:
-                failures.append(
-                    f"{source}:{call.lineno}: {'.'.join(parts)} has invalid fields {invalid}"
-                )
+                failures.append(f"{source}:{call.lineno}: {'.'.join(parts)} has invalid fields {invalid}")
                 continue
-            positional = list(params.values())[:len(call.args)]
-            supplied = {param.name for param in positional} | {
-                keyword.arg for keyword in call.keywords if keyword.arg
-            }
+            positional = list(params.values())[: len(call.args)]
+            supplied = {param.name for param in positional} | {keyword.arg for keyword in call.keywords if keyword.arg}
             required = {
                 param.name
                 for param in params.values()
@@ -73,9 +65,7 @@ def test_raw_telethon_calls_match_installed_api():
             }
             missing = required - supplied
             if missing:
-                failures.append(
-                    f"{source}:{call.lineno}: {'.'.join(parts)} is missing {sorted(missing)}"
-                )
+                failures.append(f"{source}:{call.lineno}: {'.'.join(parts)} is missing {sorted(missing)}")
 
     assert not failures, "\n".join(failures)
 
@@ -130,6 +120,7 @@ def test_message_user_args_and_input():
 
 def test_user_wrapper_and_mention():
     """Verify UserWrapper formats mention strings correctly."""
+
     class MockUser:
         id = 12345678
         first_name = "Alice"
@@ -191,6 +182,7 @@ async def test_custom_filters_composition():
 async def test_user_filters():
     """Verify user_filters command routing for self and sudo users."""
     import Main
+
     Main.Friday.user_command_handler = "."
     Main.Friday.sudo_cmd_handler = "!"
     Main.Friday.config.SUDO_USERS = [99999]
@@ -275,9 +267,10 @@ async def test_plugin_loader_finds_nested_plugins(tmp_path):
     )
     await Main.Friday.load_from_directory(str(tmp_path / "**" / "*.py"), log=False)
     try:
-        assert Main.Friday.__nested_plugin_loaded__ is True
+        assert getattr(Main.Friday, "__nested_plugin_loaded__", False) is True
     finally:
-        del Main.Friday.__nested_plugin_loaded__
+        if hasattr(Main.Friday, "__nested_plugin_loaded__"):
+            delattr(Main.Friday, "__nested_plugin_loaded__")
 
 
 @pytest.mark.asyncio

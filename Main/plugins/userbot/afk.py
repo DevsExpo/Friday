@@ -1,14 +1,13 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
 import time
 import asyncio
-import contextlib
 from Main import Friday
 from Main.utils.suppress import suppress_error
 from Main.core.types.client import FridayTelegramClient as Client
@@ -100,7 +99,6 @@ def afk_trigger_filter(c: Client, m: Message) -> bool:
     bot_mode_unsupported=True,
 )
 async def afk_mentioned(c: Client, m: Message):
-    global MENTIONED
     user = m.from_user
     user_id = getattr(user, "id", 0) if user else m.sender_id
     if user_id and not getattr(Friday, "self_test_mode", False):

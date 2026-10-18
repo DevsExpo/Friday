@@ -1,14 +1,14 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
 import contextlib
-from git import *
-from git.exc import *
+from git import Repo
+from git.exc import GitCommandError, InvalidGitRepositoryError
 from .file_helpers import run_in_exc
 
 
@@ -56,9 +56,7 @@ class Updater:
         ups_rem.fetch(self.branch)
         return ups_rem
 
-    async def update_locally(
-        self, ups_rem, repo, msg=None, Friday=None, no_restart=False
-    ):
+    async def update_locally(self, ups_rem, repo, msg=None, Friday=None, no_restart=False):
         if not Friday:
             from Main import Friday
         if msg:
@@ -68,9 +66,7 @@ class Updater:
         except GitCommandError:
             repo.git.reset("--hard", "FETCH_HEAD")
         if not no_restart:
-            await Friday.run_cmd_async(
-                "pip3 install --no-cache-dir -r requirements.txt"
-            )
+            await Friday.run_cmd_async("pip3 install --no-cache-dir -r requirements.txt")
             await Friday._restart(soft=False, last_msg=msg, power_hard=True)
 
     async def update_remotely_heroku(self, ups_rem, repo, msg):

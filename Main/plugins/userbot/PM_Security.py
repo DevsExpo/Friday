@@ -1,12 +1,11 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
-import contextlib
 import html
 from telethon import functions
 from Main import Friday
@@ -14,6 +13,7 @@ from Main.utils.suppress import suppress_error
 from Main.core.types.client import FridayTelegramClient as Client
 from Main.core.types.message import Message
 from Main.utils.custom_filters import filters
+from Main.utils.ui_tokens import ADMIN, INDICATOR, STATUS
 
 
 pm_permit_warning_cache = {}
@@ -86,7 +86,7 @@ async def mass_approve_func(c: Client, m: Message):
 
     pending_ids = list(pm_permit_warning_cache.keys())
     if not pending_ids:
-        return await msg.edit("ℹ️ <i>No pending users in PM permit warning queue.</i>", parse_mode="html")
+        return await msg.edit(f"{STATUS.INFO} <i>No pending users in PM permit warning queue.</i>", parse_mode="html")
 
     if Friday.db is not None:
         pm_permit_col = Friday.db.make_collection("pm_permit")
@@ -95,7 +95,10 @@ async def mass_approve_func(c: Client, m: Message):
 
     count = len(pending_ids)
     pm_permit_warning_cache.clear()
-    await msg.edit(f"✅ <b>Mass Approval Complete:</b> Approved <code>{count}</code> pending user(s).", parse_mode="html")
+    await msg.edit(
+        f"{STATUS.SUCCESS} <b>Mass Approval Complete:</b> Approved <code>{count}</code> pending user(s).",
+        parse_mode="html",
+    )
 
 
 @Friday.register_on_cmd(
@@ -151,14 +154,18 @@ async def disapprove_user_pm_permit_func(c: Client, m: Message):
 async def set_pm_limit_func(c: Client, m: Message):
     raw_input = m.user_input.strip()
     if not raw_input.isdigit():
-        return await m.handle_message("⚠️ Please provide a valid positive integer limit (e.g. <code>.setpmlimit 5</code>).")
+        return await m.handle_message(
+            f"{STATUS.WARNING} Please provide a valid positive integer limit (e.g. <code>.setpmlimit 5</code>)."
+        )
 
     limit = int(raw_input)
     if limit < 1 or limit > 20:
-        return await m.handle_message("⚠️ Warning limit must be between 1 and 20.")
+        return await m.handle_message(f"{STATUS.WARNING} Warning limit must be between 1 and 20.")
 
     await Friday.config.sync_env_to_db("PM_PERMIT_LIMIT", limit)
-    await m.handle_message(f"🔢 <b>PM Security Warning Limit:</b> Set to <code>{limit}</code> warnings before auto-block.")
+    await m.handle_message(
+        f"{ADMIN.NUMBER} <b>PM Security Warning Limit:</b> Set to <code>{limit}</code> warnings before auto-block."
+    )
 
 
 @Friday.register_on_cmd(
@@ -175,18 +182,18 @@ async def set_pm_msg_func(c: Client, m: Message):
         current = await Friday.config.get_pm_custom_msg()
         if current:
             return await m.handle_message(
-                f"💬 <b>Current Custom PM Message:</b>\n\n<blockquote>{html.escape(current)}</blockquote>\n\n"
+                f"{ADMIN.CHAT} <b>Current Custom PM Message:</b>\n\n<blockquote>{html.escape(current)}</blockquote>\n\n"
                 f"<i>Use</i> <code>{Friday.user_command_handler}resetpmmsg</code> <i>to restore the default template.</i>"
             )
         else:
             return await m.handle_message(
-                "💬 <b>PM Warning Message:</b> Default template is currently active.\n"
+                f"{ADMIN.CHAT} <b>PM Warning Message:</b> Default template is currently active.\n"
                 f"<i>Provide text to set a custom one:</i> <code>{Friday.user_command_handler}setpmmsg &lt;text&gt;</code>"
             )
 
     await Friday.config.sync_env_to_db("PM_PERMIT_CUSTOM_MSG", new_msg)
     await m.handle_message(
-        f"✅ <b>Custom PM Warning Message Saved:</b>\n\n<blockquote>{html.escape(new_msg)}</blockquote>"
+        f"{STATUS.SUCCESS} <b>Custom PM Warning Message Saved:</b>\n\n<blockquote>{html.escape(new_msg)}</blockquote>"
     )
 
 
@@ -200,7 +207,7 @@ async def set_pm_msg_func(c: Client, m: Message):
 )
 async def reset_pm_msg_func(c: Client, m: Message):
     await Friday.config.del_env_from_db("PM_PERMIT_CUSTOM_MSG")
-    await m.handle_message("🔄 <b>Custom PM Warning Message Reset:</b> Restored default template.")
+    await m.handle_message(f"{ADMIN.RELOAD} <b>Custom PM Warning Message Reset:</b> Restored default template.")
 
 
 @Friday.register_on_cmd(
@@ -223,7 +230,7 @@ async def pm_contacts_rule_func(c: Client, m: Message):
 
     await Friday.config.sync_env_to_db("PM_PERMIT_ALLOW_CONTACTS", new_val)
     status_text = "ENABLED (Saved contacts bypass PM Permit)" if new_val else "DISABLED (All contacts screened)"
-    await m.handle_message(f"📇 <b>Contact Auto-Allow Policy:</b> <code>{status_text}</code>")
+    await m.handle_message(f"{ADMIN.CONTACT} <b>Contact Auto-Allow Policy:</b> <code>{status_text}</code>")
 
 
 @Friday.register_on_cmd(
@@ -237,7 +244,9 @@ async def pm_contacts_rule_func(c: Client, m: Message):
 async def reset_pm_warns_func(c: Client, m: Message):
     count = len(pm_permit_warning_cache)
     pm_permit_warning_cache.clear()
-    await m.handle_message(f"🧹 <b>PM Warning Cache Cleared:</b> Reset warning counters for <code>{count}</code> user(s).")
+    await m.handle_message(
+        f"{STATUS.CLEAN} <b>PM Warning Cache Cleared:</b> Reset warning counters for <code>{count}</code> user(s)."
+    )
 
 
 @Friday.register_on_cmd(
@@ -259,25 +268,26 @@ async def pm_permit_command_handler(c: Client, m: Message):
         await Friday.config.sync_env_to_db("PM_PERMIT", False)
         if Friday.log_chat:
             await c.send_message(Friday.log_chat, "**#Pm Permit**\n\nStatus: `Disabled`")
-        return await m.handle_message("🛡️ <b>PM Security Status:</b> <code>Disabled</code>")
+        return await m.handle_message(f"{STATUS.SHIELD} <b>PM Security Status:</b> <code>Disabled</code>")
     elif "y" in user_args:
         await Friday.config.sync_env_to_db("PM_PERMIT", True)
         if Friday.log_chat:
             await c.send_message(Friday.log_chat, "**#Pm Permit**\n\nStatus: `Enabled`")
-        return await m.handle_message("🛡️ <b>PM Security Status:</b> <code>Enabled</code>")
+        return await m.handle_message(f"{STATUS.SHIELD} <b>PM Security Status:</b> <code>Enabled</code>")
 
-    is_bot = (
-        (getattr(c, "myself", None) and getattr(c.myself, "bot", False))
-        or (getattr(Friday, "bot_info", None) and getattr(c, "myself", None) and c.myself.id == Friday.bot_info.id)
+    is_bot = (getattr(c, "myself", None) and getattr(c.myself, "bot", False)) or (
+        getattr(Friday, "bot_info", None) and getattr(c, "myself", None) and c.myself.id == Friday.bot_info.id
     )
     if is_bot:
         from Main.plugins.bot.pm_security_inline import _render_pmpermit_panel
+
         text, buttons = await _render_pmpermit_panel()
         return await m.reply(text, buttons=buttons, parse_mode="html")
 
     if "-basic" not in user_args and "-text" not in user_args:
         try:
             from Main.utils.inline_helper import send_inline_widget
+
             if await send_inline_widget(c, m, "pmpermit"):
                 return
         except Exception:
@@ -290,10 +300,10 @@ async def pm_permit_command_handler(c: Client, m: Message):
     pending = len(pm_permit_warning_cache)
 
     text = (
-        "🛡️ <b>Friday PM Security Summary</b>\n\n"
-        f"• <b>Status:</b> <code>{'🟢 Enabled' if status_enabled else '🔴 Disabled'}</code>\n"
+        f"{STATUS.SHIELD} <b>Friday PM Security Summary</b>\n\n"
+        f"• <b>Status:</b> <code>{f'{INDICATOR.GREEN} Enabled' if status_enabled else f'{INDICATOR.RED} Disabled'}</code>\n"
         f"• <b>Warning Limit:</b> <code>{limit} Warnings</code> (Auto-block on #{limit + 1})\n"
-        f"• <b>Allow Contacts:</b> <code>{'✅ Yes (Bypass)' if allow_contacts else '❌ No (Screened)'}</code>\n"
+        f"• <b>Allow Contacts:</b> <code>{f'{STATUS.SUCCESS} Yes (Bypass)' if allow_contacts else f'{STATUS.ERROR} No (Screened)'}</code>\n"
         f"• <b>Custom Message:</b> <code>{'Configured' if custom_msg else 'Default Template'}</code>\n"
         f"• <b>Pending In Queue:</b> <code>{pending} user(s)</code>\n\n"
         f"<i>Tip: Use</i> <code>{Friday.user_command_handler}setpmlimit &lt;int&gt;</code>, "
@@ -433,16 +443,16 @@ async def pm_permit_new_message_listener_handler(c: Client, m: Message):
                 if getattr(sender_obj, "username", None):
                     sender_username = f"@{sender_obj.username}"
 
-            raw_txt = (getattr(m, "text", None) or getattr(m, "raw_text", None) or "[Media / Attachment]")
+            raw_txt = getattr(m, "text", None) or getattr(m, "raw_text", None) or "[Media / Attachment]"
             snippet = raw_txt[:300] + ("..." if len(raw_txt) > 300 else "")
 
             log_text = (
-                "📬 <b>#NEW_PM_CONTACT</b>\n\n"
-                f"• <b>User:</b> <a href=\"tg://user?id={sender_id}\">{html.escape(sender_name)}</a>\n"
+                f"{ADMIN.MAIL} <b>#NEW_PM_CONTACT</b>\n\n"
+                f'• <b>User:</b> <a href="tg://user?id={sender_id}">{html.escape(sender_name)}</a>\n'
                 f"• <b>User ID:</b> <code>{sender_id}</code>\n"
                 + (f"• <b>Username:</b> {sender_username}\n" if sender_username else "")
                 + f"• <b>Message:</b>\n<blockquote>{html.escape(snippet)}</blockquote>\n\n"
-                f"🛡️ <i>PM Security: Warning 1/{pm_warns_count} issued</i>"
+                f"{STATUS.SHIELD} <i>PM Security: Warning 1/{pm_warns_count} issued</i>"
             )
 
             sent = False
@@ -461,6 +471,7 @@ async def pm_permit_new_message_listener_handler(c: Client, m: Message):
     out = None
     try:
         from Main.utils.inline_helper import is_inline_available
+
         if is_inline_available() and getattr(Friday, "bot_info", None):
             bot_username = getattr(Friday.bot_info, "username", None)
             if bot_username:
@@ -476,10 +487,10 @@ async def pm_permit_new_message_listener_handler(c: Client, m: Message):
 
     if not out:
         custom_msg = await Friday.config.get_pm_custom_msg()
-        warn_badge = f"⚠️ <b>Warning: {new_warn_count} / {pm_warns_count}</b>"
+        warn_badge = f"{STATUS.WARNING} <b>Warning: {new_warn_count} / {pm_warns_count}</b>"
         if custom_msg:
             text = (
-                f"🤖 <b>Friday PM Security Protection</b>\n\n"
+                f"{ADMIN.BOT} <b>Friday PM Security Protection</b>\n\n"
                 f"{custom_msg}\n\n"
                 f"{warn_badge} <i>before automatic block.</i>"
             )

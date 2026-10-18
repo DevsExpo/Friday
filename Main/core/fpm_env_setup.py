@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -84,7 +84,9 @@ def is_package_satisfied(package_spec: str) -> bool:
         return False
 
 
-def collect_all_plugin_dependencies(filter_plugin: str = None, filter_sub: str = None) -> Tuple[Set[str], Dict[str, List[str]]]:
+def collect_all_plugin_dependencies(
+    filter_plugin: str = None, filter_sub: str = None
+) -> Tuple[Set[str], Dict[str, List[str]]]:
     """
     Collect all dependencies across all installed external plugins
     and segregated subcategories from .manifests.json and requirements.txt files.
@@ -135,7 +137,7 @@ def collect_all_plugin_dependencies(filter_plugin: str = None, filter_sub: str =
                 rel_parts = req_path.relative_to(EXTERNAL_DIR).parts
                 label = "/".join(rel_parts[:-1]) if len(rel_parts) > 1 else rel_parts[0]
                 lines = [line.strip() for line in req_path.read_text(encoding="utf-8").splitlines()]
-                valid_lines = [l for l in lines if l and not l.startswith("#")]
+                valid_lines = [ln for ln in lines if ln and not ln.startswith("#")]
                 all_deps.update(valid_lines)
                 if label not in breakdown:
                     breakdown[label] = valid_lines
@@ -161,8 +163,8 @@ def collect_all_plugin_dependencies(filter_plugin: str = None, filter_sub: str =
                     pass
             for req in suite_path.rglob("requirements.txt"):
                 try:
-                    lines = [l.strip() for l in req.read_text(encoding="utf-8").splitlines()]
-                    valid = [l for l in lines if l and not l.startswith("#")]
+                    lines = [ln.strip() for ln in req.read_text(encoding="utf-8").splitlines()]
+                    valid = [ln for ln in lines if ln and not ln.startswith("#")]
                     all_deps.update(valid)
                 except Exception:
                     pass
@@ -212,7 +214,7 @@ def verify_and_install_dependencies(check_only: bool = False) -> bool:
     print("\n📦 [FPM ENV] Batch-installing missing dependencies cleanly via pip...")
     cmd = [sys.executable, "-m", "pip", "install", "--prefer-binary", *missing]
     try:
-        proc = subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True)
         print("✅ [FPM ENV] Successfully installed all required plugin dependencies!")
         return True
     except subprocess.CalledProcessError as e:
@@ -248,7 +250,7 @@ def sync_xtra_plugins_repos() -> bool:
     if not load_xtra:
         return True
 
-    repos_str = os.environ.get("XTRA_PLUGINS_REPOS", "https://github.com/StarkGang/XtraPlugins").strip()
+    repos_str = os.environ.get("XTRA_PLUGINS_REPOS", "https://github.com/DevsExpo/XtraPlugins").strip()
     if not repos_str:
         return True
 
@@ -285,7 +287,9 @@ def sync_xtra_plugins_repos() -> bool:
                 # Directory exists but is empty or broken from a previous failed clone
                 print(f"[XTRA PLUGINS] Recovering repository in ./{repo_name} from {repo_url}...")
                 subprocess.run(["git", "-C", str(target_dir), "init"], check=True)
-                subprocess.run(["git", "-C", str(target_dir), "remote", "remove", "origin"], capture_output=True, check=False)
+                subprocess.run(
+                    ["git", "-C", str(target_dir), "remote", "remove", "origin"], capture_output=True, check=False
+                )
                 subprocess.run(["git", "-C", str(target_dir), "remote", "add", "origin", repo_url], check=True)
                 subprocess.run(["git", "-C", str(target_dir), "fetch", "--depth", "1", "origin"], check=True)
                 subprocess.run(["git", "-C", str(target_dir), "reset", "--hard", "FETCH_HEAD"], check=True)
@@ -293,13 +297,23 @@ def sync_xtra_plugins_repos() -> bool:
             else:
                 # Ensure origin remote URL always matches repo_url in case upstream changed
                 subprocess.run(["git", "-C", str(target_dir), "remote", "set-url", "origin", repo_url], check=False)
-                pull_res = subprocess.run(["git", "-C", str(target_dir), "pull", "--ff-only"], capture_output=True, text=True, check=False)
+                pull_res = subprocess.run(
+                    ["git", "-C", str(target_dir), "pull", "--ff-only"], capture_output=True, text=True, check=False
+                )
                 if pull_res.returncode == 0:
                     print(f"✅ [XTRA PLUGINS] Synced ./{repo_name} successfully.")
                 else:
-                    fetch_res = subprocess.run(["git", "-C", str(target_dir), "fetch", "--depth", "1", "origin"], capture_output=True, check=False)
+                    fetch_res = subprocess.run(
+                        ["git", "-C", str(target_dir), "fetch", "--depth", "1", "origin"],
+                        capture_output=True,
+                        check=False,
+                    )
                     if fetch_res.returncode == 0:
-                        subprocess.run(["git", "-C", str(target_dir), "reset", "--hard", "FETCH_HEAD"], capture_output=True, check=False)
+                        subprocess.run(
+                            ["git", "-C", str(target_dir), "reset", "--hard", "FETCH_HEAD"],
+                            capture_output=True,
+                            check=False,
+                        )
                         print(f"✅ [XTRA PLUGINS] Updated ./{repo_name} successfully.")
                     else:
                         print(f"ℹ️ [XTRA PLUGINS] Local changes detected in ./{repo_name}, preserving local state.")
@@ -333,4 +347,3 @@ if __name__ == "__main__":
         sync_xtra_plugins_repos()
         success = verify_and_install_dependencies(check_only=False)
         sys.exit(0 if success else 1)
-

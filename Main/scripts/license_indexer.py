@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -39,11 +39,11 @@ def file_list(path, lisT):
     return lisT
 
 
-str_license_ = """# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+str_license_ = """# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved."""
 
@@ -72,16 +72,12 @@ async def licence_file(file_path, len_files):
 @run_in_exc
 def get_file_path():
     if sys.__stdin__.isatty():
-        file_path = input(
-            "\033[31m" + "Enter Folder Path Containing your Python Files : \n"
-        )
+        file_path = input("\033[31m" + "Enter Folder Path Containing your Python Files : \n")
     else:
         file_path = os.getenv("TO_INDEX") or "."
     if not os.path.isdir(file_path):
         while not os.path.isdir(file_path):
-            file_path = input(
-                "Try Again : [IS_NOT_A_DIR] Give me Valid Path. (n - to stop)\n"
-            )
+            file_path = input("Try Again : [IS_NOT_A_DIR] Give me Valid Path. (n - to stop)\n")
             if file_path == "n":
                 print("Closing Script. Please Halt.")
                 exit(1)
@@ -97,10 +93,7 @@ async def do_it():
     await asyncio.gather(*[licence_file(i, len_files) for i in files_])
     end_time = await (run_in_exc(time.perf_counter))()
     ms = round((end_time - start_time) * 1000, 2)
-    print(
-        "\033[96m"
-        + f"Tasked Completed in {ms} ms - Added Licence header in {len_files} Files."
-    )
+    print("\033[96m" + f"Tasked Completed in {ms} ms - Added Licence header in {len_files} Files.")
 
 
 loop = asyncio.new_event_loop()

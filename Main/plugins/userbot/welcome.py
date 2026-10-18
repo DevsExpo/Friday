@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -80,9 +80,7 @@ async def del_welcome_cmd(c: Client, m: Message):
 )
 async def welcome_settings_cmd(c: Client, m: Message):
     curr_chat_id = m.chat_id or getattr(m.chat, "id", None)
-    welcome_data = await welcome_db.find_one(
-        {"chat_id": curr_chat_id, "client_id": c.myself.id}
-    )
+    welcome_data = await welcome_db.find_one({"chat_id": curr_chat_id, "client_id": c.myself.id})
     if not welcome_data or not Friday.log_chat:
         return await m.handle_message("NO_WELCOME_SAVED")
     await m.handle_message("CURRENT_WELCOME")
@@ -100,9 +98,7 @@ async def welcome_filter(c: Client, m: Message):
     chat_id = getattr(m, "chat_id", None) or getattr(getattr(m, "chat", None), "id", None)
     if not chat_id:
         return False
-    is_welcome_enabled = await welcome_db.find_one(
-        {"chat_id": chat_id, "client_id": c.myself.id}
-    )
+    is_welcome_enabled = await welcome_db.find_one({"chat_id": chat_id, "client_id": c.myself.id})
     return bool(is_welcome_enabled)
 
 
@@ -121,14 +117,10 @@ async def is_media(message):
     )
 
 
-@Friday.on_message(
-    filters.create(welcome_filter) & filters.new_chat_members & filters.group
-)
+@Friday.on_message(filters.create(welcome_filter) & filters.new_chat_members & filters.group)
 async def welcome_users(c: Client, m: Message):
     media = False
-    welcome_data = await welcome_db.find_one(
-        {"chat_id": m.chat.id, "client_id": c.myself.id}
-    )
+    welcome_data = await welcome_db.find_one({"chat_id": m.chat.id, "client_id": c.myself.id})
     welcome_message = await c.get_messages(Friday.log_chat, welcome_data["msg_id"])
     if await is_media(welcome_message):
         text = getattr(welcome_message, "caption", None) or getattr(welcome_message, "text", "") or ""

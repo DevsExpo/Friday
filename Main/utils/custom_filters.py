@@ -1,17 +1,16 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
 from __future__ import annotations
 
 import re
-import contextlib
 from Main.utils.suppress import suppress_error
-from typing import Any, Callable, List, Optional, Union
+from typing import Any, Callable, List, Union
 
 
 class Filter:
@@ -35,16 +34,19 @@ class Filter:
     def __and__(self, other: Filter) -> Filter:
         async def combined(c: Any, m: Any) -> bool:
             return (await self(c, m)) and (await other(c, m))
+
         return Filter(combined)
 
     def __or__(self, other: Filter) -> Filter:
         async def combined(c: Any, m: Any) -> bool:
             return (await self(c, m)) or (await other(c, m))
+
         return Filter(combined)
 
     def __invert__(self) -> Filter:
         async def inverted(c: Any, m: Any) -> bool:
             return not (await self(c, m))
+
         return Filter(inverted)
 
 
@@ -63,7 +65,12 @@ class Filters:
             prefixes = list(prefixes)
 
         def check(client: Any, message: Any) -> bool:
-            text = getattr(message, "text", None) or getattr(message, "raw_text", None) or getattr(message, "message", None) or ""
+            text = (
+                getattr(message, "text", None)
+                or getattr(message, "raw_text", None)
+                or getattr(message, "message", None)
+                or ""
+            )
             if not text:
                 return False
             first_word = text.split()[0].lower() if text.split() else ""
@@ -72,7 +79,11 @@ class Filters:
             for p in prefixes:
                 for cmd in commands:
                     prefix_cmd = f"{p}{cmd}".lower()
-                    if text.lower() == prefix_cmd or text.lower().startswith(f"{prefix_cmd} ") or text.lower().startswith(f"{prefix_cmd}\n"):
+                    if (
+                        text.lower() == prefix_cmd
+                        or text.lower().startswith(f"{prefix_cmd} ")
+                        or text.lower().startswith(f"{prefix_cmd}\n")
+                    ):
                         return True
                     if first_word.startswith(f"{prefix_cmd}@"):
                         bot_username = ""
@@ -80,7 +91,10 @@ class Filters:
                             bot_username = (getattr(client.myself, "username", "") or "").lower()
                         elif hasattr(client, "get_me"):
                             import Main
-                            bot_username = (getattr(getattr(Main.Friday, "bot_info", None), "username", "") or "").lower()
+
+                            bot_username = (
+                                getattr(getattr(Main.Friday, "bot_info", None), "username", "") or ""
+                            ).lower()
                         at_target = first_word.split("@", 1)[1]
                         if not bot_username or at_target == bot_username:
                             return True
@@ -204,11 +218,17 @@ def user_filters(cmd: Union[str, List[str]], disable_sudo: bool = False) -> Filt
     cmd_set = {c.lower() for c in cmd}
 
     async def check(client: Any, message: Any) -> bool:
-        text = getattr(message, "text", None) or getattr(message, "raw_text", None) or getattr(message, "message", None) or ""
+        text = (
+            getattr(message, "text", None)
+            or getattr(message, "raw_text", None)
+            or getattr(message, "message", None)
+            or ""
+        )
         if not text or not isinstance(text, str) or len(text) < 2:
             return False
 
         import Main
+
         friday = Main.Friday
         user_prefix = getattr(friday, "user_command_handler", ".") or "."
         sudo_prefix = getattr(friday, "sudo_cmd_handler", "!") or "!"

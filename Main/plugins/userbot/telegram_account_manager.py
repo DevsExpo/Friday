@@ -1,15 +1,19 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
+import os
+import time
+
 from Main import Friday
-from telethon import functions, types
+from telethon import errors, functions, types
 from Main.core.types import FridayTelegramClient as Client, Message
 from Main.utils.suppress import suppress_error
+from Main.utils.ui_tokens import ADMIN, INDICATOR, STATUS
 
 
 @Friday.register_on_cmd(
@@ -29,14 +33,42 @@ from Main.utils.suppress import suppress_error
             {"arg": "s", "help": "View active login sessions", "requires_input": False},
             {"arg": "ts", "help": "Terminate all other active login sessions", "requires_input": False},
             {"arg": "ttl", "help": "View or set account self-destruct TTL (-ttl 180)", "requires_input": False},
-            {"arg": "sensitive", "help": "Toggle sensitive/NSFW media display (-sensitive on|off)", "requires_input": True},
-            {"arg": "archive", "help": "Toggle archive & mute new non-contact chats (-archive on|off)", "requires_input": True},
-            {"arg": "signup", "help": "Toggle contact joined Telegram notifications (-signup on|off)", "requires_input": True},
-            {"arg": "channel", "help": "Set or remove personal channel on profile (-channel @chan|id|off)", "requires_input": True},
+            {
+                "arg": "sensitive",
+                "help": "Toggle sensitive/NSFW media display (-sensitive on|off)",
+                "requires_input": True,
+            },
+            {
+                "arg": "archive",
+                "help": "Toggle archive & mute new non-contact chats (-archive on|off)",
+                "requires_input": True,
+            },
+            {
+                "arg": "signup",
+                "help": "Toggle contact joined Telegram notifications (-signup on|off)",
+                "requires_input": True,
+            },
+            {
+                "arg": "channel",
+                "help": "Set or remove personal channel on profile (-channel @chan|id|off)",
+                "requires_input": True,
+            },
             {"arg": "bday", "help": "Set or remove birthday (-bday DD MM [YYYY]|off)", "requires_input": True},
-            {"arg": "privacy", "help": "View your account privacy rules and visibility settings", "requires_input": False},
-            {"arg": "sessions", "help": "List all active Friday userbot accounts and segregation status", "requires_input": False},
-            {"arg": "logout", "help": "Disconnect and logout this session from Friday (-logout or -logout <idx>)", "requires_input": False},
+            {
+                "arg": "privacy",
+                "help": "View your account privacy rules and visibility settings",
+                "requires_input": False,
+            },
+            {
+                "arg": "sessions",
+                "help": "List all active Friday userbot accounts and segregation status",
+                "requires_input": False,
+            },
+            {
+                "arg": "logout",
+                "help": "Disconnect and logout this session from Friday (-logout or -logout <idx>)",
+                "requires_input": False,
+            },
         ],
     },
 )
@@ -106,8 +138,8 @@ async def account_modify(c: Client, m: Message):
         total_c = len(clients_list) or 1
 
         overview = (
-            "<b>⚙️ Telegram Account Settings & Profile:</b>\n\n"
-            "<b>👤 User Information:</b>\n"
+            f"<b>{STATUS.GEAR} Telegram Account Settings & Profile:</b>\n\n"
+            f"<b>{ADMIN.USER} User Information:</b>\n"
             f"  • <b>Name:</b> <code>{first_name} {last_name}</code>\n"
             f"  • <b>Username:</b> <code>{username}</code>\n"
             f"  • <b>User ID:</b> <code>{me.id}</code>\n"
@@ -118,7 +150,7 @@ async def account_modify(c: Client, m: Message):
             f"  • <b>Bio:</b> <i>{about_text or 'None'}</i>\n"
             f"  • <b>Birthday:</b> <code>{birthday_str}</code>\n"
             f"  • <b>Personal Channel:</b> {personal_channel_str}\n\n"
-            "<b>🔒 Security & Preferences:</b>\n"
+            f"<b>{STATUS.LOCK} Security & Preferences:</b>\n"
             f"  • <b>Self-Destruct TTL:</b> <code>{ttl_days}</code>\n"
             f"  • <b>Active Sessions:</b> <code>{sess_count}</code>\n"
             f"  • <b>Sensitive Content (18+):</b> <code>{sensitive_status}</code>\n"
@@ -141,7 +173,7 @@ async def account_modify(c: Client, m: Message):
         lname = parts[1] if len(parts) > 1 else ""
         await c(functions.account.UpdateProfileRequest(first_name=fname, last_name=lname))
         full_name = f"{fname} {lname}".strip()
-        return await msg.edit_msg(f"✅ Successfully updated profile name to: <b>{full_name}</b>")
+        return await msg.edit_msg(f"{STATUS.SUCCESS} Successfully updated profile name to: <b>{full_name}</b>")
 
     # 3. UPDATE FIRST NAME: -f First
     if "f" in args or "-f" in args:
@@ -165,7 +197,7 @@ async def account_modify(c: Client, m: Message):
             return await msg.edit_msg("INPUT_REQUIRED")
         bio = "" if m.user_input.strip().lower() in ("clear", "none", "off", "rm") else m.user_input
         await c(functions.account.UpdateProfileRequest(about=bio))
-        return await msg.edit_msg(f"📝 Bio updated: <b>{bio or 'Cleared'}</b>")
+        return await msg.edit_msg(f"{ADMIN.NOTE} Bio updated: <b>{bio or 'Cleared'}</b>")
 
     # 6. UPDATE USERNAME: -u username or -u clear
     if "u" in args or "-u" in args:
@@ -210,9 +242,11 @@ async def account_modify(c: Client, m: Message):
         photos_res = await c(functions.photos.GetUserPhotosRequest(user_id="me", offset=0, max_id=0, limit=1))
         if photos_res and photos_res.photos:
             p = photos_res.photos[0]
-            await c(functions.photos.DeletePhotosRequest(
-                id=[types.InputPhoto(id=p.id, access_hash=p.access_hash, file_reference=p.file_reference)]
-            ))
+            await c(
+                functions.photos.DeletePhotosRequest(
+                    id=[types.InputPhoto(id=p.id, access_hash=p.access_hash, file_reference=p.file_reference)]
+                )
+            )
             return await msg.edit_msg("PROFILE_PHOTO_REMOVED")
         return await msg.edit_msg("NO_PROFILE_PHOTO")
 
@@ -251,7 +285,7 @@ async def account_modify(c: Client, m: Message):
     if "ts" in args or "-ts" in args:
         try:
             await c(functions.auth.ResetAuthorizationsRequest())
-            return await msg.edit_msg("🔒 All other sessions terminated successfully.")
+            return await msg.edit_msg(f"{STATUS.LOCK} All other sessions terminated successfully.")
         except Exception as e:
             return await msg.edit_msg("SESSIONS_TERMINATE_FAILED", string_args=(str(e),))
 
@@ -260,13 +294,17 @@ async def account_modify(c: Client, m: Message):
         val_str = (m.user_input or "").strip().lower()
         if val_str in ("on", "true", "1", "enable"):
             await c(functions.account.SetContentSettingsRequest(sensitive_enabled=True))
-            return await msg.edit_msg("🔞 Sensitive content filter disabled (showing 18+ content).")
+            return await msg.edit_msg(f"{ADMIN.NSFW} Sensitive content filter disabled (showing 18+ content).")
         elif val_str in ("off", "false", "0", "disable"):
             await c(functions.account.SetContentSettingsRequest(sensitive_enabled=False))
-            return await msg.edit_msg("🛡 Sensitive content filter enabled (filtering 18+ content).")
+            return await msg.edit_msg(f"{STATUS.SHIELD} Sensitive content filter enabled (filtering 18+ content).")
         else:
             c_res = await c(functions.account.GetContentSettingsRequest())
-            curr = "Enabled (Showing 18+ content)" if getattr(c_res, "sensitive_enabled", False) else "Disabled (Filtering 18+ content)"
+            curr = (
+                "Enabled (Showing 18+ content)"
+                if getattr(c_res, "sensitive_enabled", False)
+                else "Disabled (Filtering 18+ content)"
+            )
             return await msg.edit_msg(
                 f"<b>Sensitive Content Status:</b> <code>{curr}</code>\n\n"
                 f"<i>To change:</i> <code>{Friday.user_command_handler}set -sensitive on|off</code>"
@@ -276,15 +314,19 @@ async def account_modify(c: Client, m: Message):
     if "archive" in args or "-archive" in args:
         val_str = (m.user_input or "").strip().lower()
         if val_str in ("on", "true", "1", "enable"):
-            await c(functions.account.SetGlobalPrivacySettingsRequest(
-                settings=types.GlobalPrivacySettings(archive_and_mute_new_noncontact_peers=True)
-            ))
-            return await msg.edit_msg("📦 Auto-archive enabled for new non-contact chats.")
+            await c(
+                functions.account.SetGlobalPrivacySettingsRequest(
+                    settings=types.GlobalPrivacySettings(archive_and_mute_new_noncontact_peers=True)
+                )
+            )
+            return await msg.edit_msg(f"{ADMIN.PACKAGE} Auto-archive enabled for new non-contact chats.")
         elif val_str in ("off", "false", "0", "disable"):
-            await c(functions.account.SetGlobalPrivacySettingsRequest(
-                settings=types.GlobalPrivacySettings(archive_and_mute_new_noncontact_peers=False)
-            ))
-            return await msg.edit_msg("📦 Auto-archive disabled for new non-contact chats.")
+            await c(
+                functions.account.SetGlobalPrivacySettingsRequest(
+                    settings=types.GlobalPrivacySettings(archive_and_mute_new_noncontact_peers=False)
+                )
+            )
+            return await msg.edit_msg(f"{ADMIN.PACKAGE} Auto-archive disabled for new non-contact chats.")
         else:
             g_res = await c(functions.account.GetGlobalPrivacySettingsRequest())
             curr = "Enabled" if getattr(g_res, "archive_and_mute_new_noncontact_peers", False) else "Disabled"
@@ -298,10 +340,10 @@ async def account_modify(c: Client, m: Message):
         val_str = (m.user_input or "").strip().lower()
         if val_str in ("off", "mute", "silent", "disable"):
             await c(functions.account.SetContactSignUpNotificationRequest(silent=True))
-            return await msg.edit_msg("🔕 Contact joined alerts: Disabled")
+            return await msg.edit_msg(f"{ADMIN.BELL_OFF} Contact joined alerts: Disabled")
         elif val_str in ("on", "active", "enable"):
             await c(functions.account.SetContactSignUpNotificationRequest(silent=False))
-            return await msg.edit_msg("🔔 Contact joined alerts: Enabled")
+            return await msg.edit_msg(f"{ADMIN.BELL} Contact joined alerts: Enabled")
         else:
             s_res = await c(functions.account.GetContactSignUpNotificationRequest())
             curr = "Muted" if getattr(s_res, "silent", False) else "Active"
@@ -345,8 +387,8 @@ async def account_modify(c: Client, m: Message):
         try:
             await c(functions.account.UpdateBirthdayRequest(birthday=types.Birthday(day=day, month=month, year=year)))
             y_str = f"/{year}" if year else ""
-            return await msg.edit_msg(f"🎂 Birthday set to: <b>{day:02d}/{month:02d}{y_str}</b>")
-        except Exception as e:
+            return await msg.edit_msg(f"{ADMIN.BIRTHDAY} Birthday set to: <b>{day:02d}/{month:02d}{y_str}</b>")
+        except Exception:
             return await msg.edit_msg("INVALID_INPUT")
 
     # 17. PRIVACY OVERVIEW: -privacy
@@ -360,7 +402,7 @@ async def account_modify(c: Client, m: Message):
             ("Voice Messages", types.InputPrivacyKeyVoiceMessages()),
             ("Group Invites", types.InputPrivacyKeyChatInvite()),
         ]
-        text_ = "<b>🔒 Telegram Privacy Settings:</b>\n\n"
+        text_ = f"<b>{STATUS.LOCK} Telegram Privacy Settings:</b>\n\n"
         for label, p_key in keys:
             try:
                 p_res = await c(functions.account.GetPrivacyRequest(key=p_key))
@@ -380,7 +422,7 @@ async def account_modify(c: Client, m: Message):
     # 18. LIST ALL FRIDAY SESSIONS: -sessions
     if "sessions" in args or "-sessions" in args or "clients" in args or "-clients" in args:
         clients_list = getattr(Friday, "clients", [])
-        text_ = f"👥 <b>Active Friday Userbot Accounts:</b> ({len(clients_list)} connected)\n\n"
+        text_ = f"{ADMIN.USERS} <b>Active Friday Userbot Accounts:</b> ({len(clients_list)} connected)\n\n"
         for i, cl in enumerate(clients_list):
             u = getattr(cl, "myself", None)
             u_name = getattr(u, "first_name", f"Account #{i + 1}") if u else f"Account #{i + 1}"
@@ -395,7 +437,7 @@ async def account_modify(c: Client, m: Message):
                 f"   • <b>Segregation:</b> <code>Dedicated MTProto Connection</code>\n\n"
             )
         text_ += (
-            f"💡 <i>Each account operates in an isolated event loop and connection.</i>\n"
+            f"{ADMIN.LAMP} <i>Each account operates in an isolated event loop and connection.</i>\n"
             f"<i>To disconnect an account:</i> <code>{Friday.user_command_handler}account -logout [index]</code>"
         )
         return await msg.edit_msg(text_)
@@ -412,20 +454,22 @@ async def account_modify(c: Client, m: Message):
                 target_idx = req_idx
                 target_client = clients_list[target_idx]
             else:
-                return await msg.edit_msg(f"❌ Invalid session index. Active accounts: 1 to {len(clients_list)}")
+                return await msg.edit_msg(
+                    f"{STATUS.ERROR} Invalid session index. Active accounts: 1 to {len(clients_list)}"
+                )
 
         u = getattr(target_client, "myself", None)
         u_name = getattr(u, "first_name", f"Account #{target_idx + 1}") if u else f"Account #{target_idx + 1}"
 
-        await msg.edit_msg(f"🚪 Disconnecting and logging out <b>{u_name}</b> (Account #{target_idx + 1})...")
+        await msg.edit_msg(f"{ADMIN.DOOR} Disconnecting and logging out <b>{u_name}</b> (Account #{target_idx + 1})...")
         success = await Friday.remove_session(target_client)
         if success:
             return await msg.edit_msg(
-                f"✅ <b>Successfully logged out:</b> <b>{u_name}</b> (Account #{target_idx + 1}).\n"
+                f"{STATUS.SUCCESS} <b>Successfully logged out:</b> <b>{u_name}</b> (Account #{target_idx + 1}).\n"
                 "Session disconnected and purged from active memory, configuration, and database."
             )
         else:
-            return await msg.edit_msg("❌ Failed to log out session.")
+            return await msg.edit_msg(f"{STATUS.ERROR} Failed to log out session.")
 
     return await msg.edit_msg("INPUT_REQUIRED")
 
@@ -450,20 +494,22 @@ async def logout_cmd(c: Client, m: Message):
             target_idx = req_idx
             target_client = clients_list[target_idx]
         else:
-            return await msg.edit_msg(f"❌ Invalid session index. Active accounts: 1 to {len(clients_list)}")
+            return await msg.edit_msg(
+                f"{STATUS.ERROR} Invalid session index. Active accounts: 1 to {len(clients_list)}"
+            )
 
     u = getattr(target_client, "myself", None)
     u_name = getattr(u, "first_name", f"Account #{target_idx + 1}") if u else f"Account #{target_idx + 1}"
 
-    await msg.edit_msg(f"🚪 Disconnecting and logging out <b>{u_name}</b> (Account #{target_idx + 1})...")
+    await msg.edit_msg(f"{ADMIN.DOOR} Disconnecting and logging out <b>{u_name}</b> (Account #{target_idx + 1})...")
     success = await Friday.remove_session(target_client)
     if success:
         return await msg.edit_msg(
-            f"✅ <b>Successfully logged out:</b> <b>{u_name}</b> (Account #{target_idx + 1}).\n"
+            f"{STATUS.SUCCESS} <b>Successfully logged out:</b> <b>{u_name}</b> (Account #{target_idx + 1}).\n"
             "Session disconnected and purged from active memory, configuration, and database."
         )
     else:
-        return await msg.edit_msg("❌ Failed to log out session.")
+        return await msg.edit_msg(f"{STATUS.ERROR} Failed to log out session.")
 
 
 @Friday.register_on_cmd(
@@ -480,16 +526,18 @@ async def progressbar_toggle_cmd(c: Client, m: Message):
 
     if val_str in ("on", "enable", "true", "1", "yes"):
         await Friday.config.set_progress_bar_sts(True)
-        return await msg.edit_msg("📊 <b>Upload Progress Bar:</b> 🟢 Enabled (Dynamic ASCII progress bar on file transfers).")
+        return await msg.edit_msg(
+            f"{ADMIN.METRICS} <b>Upload Progress Bar:</b> {INDICATOR.GREEN} Enabled (Dynamic ASCII progress bar on file transfers)."
+        )
     elif val_str in ("off", "disable", "false", "0", "no", "clean"):
         await Friday.config.set_progress_bar_sts(False)
-        return await msg.edit_msg("📊 <b>Upload Progress Bar:</b> 🔴 Disabled (Clean mode: transfers run silently without flood waits).")
+        return await msg.edit_msg(
+            f"{ADMIN.METRICS} <b>Upload Progress Bar:</b> {INDICATOR.RED} Disabled (Clean mode: transfers run silently without flood waits)."
+        )
     else:
         current = await Friday.config.get_progress_bar_sts()
-        sts = "🟢 Enabled" if current else "🔴 Disabled (Clean Mode)"
+        sts = f"{INDICATOR.GREEN} Enabled" if current else f"{INDICATOR.RED} Disabled (Clean Mode)"
         return await msg.edit_msg(
-            f"📊 <b>Upload Progress Bar Status:</b> {sts}\n\n"
+            f"{ADMIN.METRICS} <b>Upload Progress Bar Status:</b> {sts}\n\n"
             f"<i>To toggle:</i> <code>{Friday.user_command_handler}progressbar on|off</code>"
         )
-
-

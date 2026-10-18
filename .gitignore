@@ -166,3 +166,5 @@ Main/plugins/userbot/.goutputstream-CIPMO1
 *.db
 /plug
 sessions_backup/
+lint.py
+report.md

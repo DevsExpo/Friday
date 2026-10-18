@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -33,23 +33,22 @@ from Main.utils.essentials import Essentials
     },
 )
 async def alive(c: Client, m: Message):
-    is_bot = (
-        (getattr(c, "myself", None) and getattr(c.myself, "bot", None) is True)
-        or (
-            getattr(Friday, "bot_info", None)
-            and getattr(c, "myself", None)
-            and getattr(Friday.bot_info, "id", None) is not None
-            and getattr(c.myself, "id", None) == Friday.bot_info.id
-        )
+    is_bot = (getattr(c, "myself", None) and getattr(c.myself, "bot", None) is True) or (
+        getattr(Friday, "bot_info", None)
+        and getattr(c, "myself", None)
+        and getattr(Friday.bot_info, "id", None) is not None
+        and getattr(c.myself, "id", None) == Friday.bot_info.id
     )
     if is_bot:
         from Main.plugins.bot.alive import _make_alive_content
+
         text, buttons = _make_alive_content()
         return await m.reply(text, buttons=buttons, parse_mode="html")
 
     if "-basic" not in m.user_args and "-text" not in m.user_args:
         try:
             from Main.utils.inline_helper import send_inline_widget
+
             if await send_inline_widget(c, m, "alive"):
                 return
         except Exception:
@@ -60,7 +59,10 @@ async def alive(c: Client, m: Message):
     path_ = "./cache/alive.*"
     files = glob.glob(path_)
     file = files[0] if files else ""
-    template = Friday.get_string("ALIVE_TEXT") or "<b>Friday Userbot (Telethon) is Alive!</b>\nVersion: <code>{0}</code>\nUptime: <code>{1}</code>"
+    template = (
+        Friday.get_string("ALIVE_TEXT")
+        or "<b>Friday Userbot (Telethon) is Alive!</b>\nVersion: <code>{0}</code>\nUptime: <code>{1}</code>"
+    )
     text = template.format(version, uptime)
     if os.path.exists(file):
         await m.reply_file(file, caption=text)

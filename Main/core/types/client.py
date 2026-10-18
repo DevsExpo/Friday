@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -15,9 +15,9 @@ import mimetypes
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from telethon import TelegramClient, functions, types, errors, utils
-from Main.utils.file_utils import FileHelpers
 
 logger = logging.getLogger("friday.client")
+
 
 def _user_mention(user):
     name = getattr(user, "first_name", None) or "User"
@@ -25,12 +25,21 @@ def _user_mention(user):
         return f"@{user.username}"
     return f"<a href='tg://user?id={user.id}'>{name}</a>"
 
+
 for _target, _attr, _val in [
     (types.User, "is_bot", property(lambda self: bool(getattr(self, "bot", False)))),
     (types.User, "mention", property(_user_mention)),
     (types.User, "type", "private"),
     (types.Channel, "type", property(lambda self: "channel" if getattr(self, "broadcast", False) else "supergroup")),
-    (types.Channel, "mention", property(lambda self: f"@{self.username}" if getattr(self, "username", None) else f"<b>{getattr(self, 'title', 'Channel')}</b>")),
+    (
+        types.Channel,
+        "mention",
+        property(
+            lambda self: f"@{self.username}"
+            if getattr(self, "username", None)
+            else f"<b>{getattr(self, 'title', 'Channel')}</b>"
+        ),
+    ),
     (types.Chat, "type", "group"),
     (types.Chat, "mention", property(lambda self: f"<b>{getattr(self, 'title', 'Group')}</b>")),
 ]:
@@ -51,6 +60,7 @@ class FridayTelegramClient(TelegramClient):
         super().__init__(*args, **kwargs)
         self.__class__.__module__ = "telethon.client.telegramclient"
         from Main.core.html_parser import patch_telethon_html
+
         patch_telethon_html()
         self.parse_mode = "html"
         self.myself: Optional[types.User] = None
@@ -59,11 +69,13 @@ class FridayTelegramClient(TelegramClient):
     async def send_message(self, *args, **kwargs) -> Any:
         res = await super().send_message(*args, **kwargs)
         from Main.core.types.message import enrich_message
+
         return enrich_message(res, self)
 
     async def edit_message(self, *args, **kwargs) -> Any:
         res = await super().edit_message(*args, **kwargs)
         from Main.core.types.message import enrich_message
+
         return enrich_message(res, self)
 
     async def send_file(self, *args, **kwargs) -> Any:
@@ -74,6 +86,7 @@ class FridayTelegramClient(TelegramClient):
             if isinstance(file_target, (str, bytes, os.PathLike)):
                 fname = os.path.basename(str(file_target))
             from Main.utils.progress import create_progress_callback
+
             kwargs["progress_callback"] = create_progress_callback(
                 progress_msg,
                 action="Uploading",
@@ -81,6 +94,7 @@ class FridayTelegramClient(TelegramClient):
             )
         res = await super().send_file(*args, **kwargs)
         from Main.core.types.message import enrich_message
+
         return enrich_message(res, self)
 
     async def invoke(self, query: Any, *args, **kwargs) -> Any:
@@ -131,15 +145,19 @@ class FridayTelegramClient(TelegramClient):
     async def set_chat_title(self, chat_id: Union[int, str], title: str) -> Any:
         entity = await self.get_entity(chat_id)
         if isinstance(entity, types.Channel):
-            return await self(functions.channels.EditTitleRequest(
-                channel=utils.get_input_channel(await self.get_input_entity(entity)),
-                title=title,
-            ))
+            return await self(
+                functions.channels.EditTitleRequest(
+                    channel=utils.get_input_channel(await self.get_input_entity(entity)),
+                    title=title,
+                )
+            )
         if isinstance(entity, types.Chat):
-            return await self(functions.messages.EditChatTitleRequest(
-                chat_id=entity.id,
-                title=title,
-            ))
+            return await self(
+                functions.messages.EditChatTitleRequest(
+                    chat_id=entity.id,
+                    title=title,
+                )
+            )
         raise ValueError("A group or channel is required to change its title")
 
     async def set_chat_photo(self, chat_id: Union[int, str], photo: str) -> Any:
@@ -147,30 +165,38 @@ class FridayTelegramClient(TelegramClient):
         entity = await self.get_entity(chat_id)
         chat_photo = types.InputChatUploadedPhoto(file=uploaded)
         if isinstance(entity, types.Channel):
-            return await self(functions.channels.EditPhotoRequest(
-                channel=utils.get_input_channel(await self.get_input_entity(entity)),
-                photo=chat_photo,
-            ))
+            return await self(
+                functions.channels.EditPhotoRequest(
+                    channel=utils.get_input_channel(await self.get_input_entity(entity)),
+                    photo=chat_photo,
+                )
+            )
         if isinstance(entity, types.Chat):
-            return await self(functions.messages.EditChatPhotoRequest(
-                chat_id=entity.id,
-                photo=chat_photo,
-            ))
+            return await self(
+                functions.messages.EditChatPhotoRequest(
+                    chat_id=entity.id,
+                    photo=chat_photo,
+                )
+            )
         raise ValueError("A group or channel is required to change its photo")
 
     async def delete_chat_photo(self, chat_id: Union[int, str]) -> Any:
         entity = await self.get_entity(chat_id)
         chat_photo = types.InputChatPhotoEmpty()
         if isinstance(entity, types.Channel):
-            return await self(functions.channels.EditPhotoRequest(
-                channel=utils.get_input_channel(await self.get_input_entity(entity)),
-                photo=chat_photo,
-            ))
+            return await self(
+                functions.channels.EditPhotoRequest(
+                    channel=utils.get_input_channel(await self.get_input_entity(entity)),
+                    photo=chat_photo,
+                )
+            )
         if isinstance(entity, types.Chat):
-            return await self(functions.messages.EditChatPhotoRequest(
-                chat_id=entity.id,
-                photo=chat_photo,
-            ))
+            return await self(
+                functions.messages.EditChatPhotoRequest(
+                    chat_id=entity.id,
+                    photo=chat_photo,
+                )
+            )
         raise ValueError("A group or channel is required to remove its photo")
 
     async def ban_chat_member(self, chat_id: Union[int, str], user_id: Union[int, str], until_date=None) -> Any:
@@ -261,17 +287,17 @@ class FridayTelegramClient(TelegramClient):
     ) -> Any:
         """Send an inline bot result to a chat."""
         try:
-            return await self(functions.messages.SendInlineBotResultRequest(
-                peer=await self.get_input_entity(chat_id),
-                query_id=int(query_id) if query_id else 0,
-                id=str(result_id),
-                random_id=int.from_bytes(os.urandom(8), byteorder="big", signed=True),
-                reply_to=(
-                    types.InputReplyToMessage(reply_to_message_id)
-                    if reply_to_message_id is not None
-                    else None
-                ),
-            ))
+            return await self(
+                functions.messages.SendInlineBotResultRequest(
+                    peer=await self.get_input_entity(chat_id),
+                    query_id=int(query_id) if query_id else 0,
+                    id=str(result_id),
+                    random_id=int.from_bytes(os.urandom(8), byteorder="big", signed=True),
+                    reply_to=(
+                        types.InputReplyToMessage(reply_to_message_id) if reply_to_message_id is not None else None
+                    ),
+                )
+            )
         except Exception as e:
             logger.error(f"Error sending inline bot result: {e}")
             raise
@@ -283,6 +309,7 @@ class FridayTelegramClient(TelegramClient):
     async def upload_doc(self, file_path: str, peer: Any = None, force_file: bool = False) -> types.InputDocument:
         """Upload a file and return an InputDocument representation."""
         from telethon import utils
+
         uploaded = await self.upload_file(file_path)
         mime = self.guess_mime_type(file_path)
         if file_path.endswith(".tgs"):
@@ -298,15 +325,17 @@ class FridayTelegramClient(TelegramClient):
         else:
             target_peer = types.InputPeerSelf()
 
-        uploaded_media = await self(functions.messages.UploadMediaRequest(
-            peer=target_peer,
-            media=types.InputMediaUploadedDocument(
-                file=uploaded,
-                mime_type=mime,
-                attributes=[types.DocumentAttributeFilename(os.path.basename(file_path))],
-                force_file=force_file,
-            ),
-        ))
+        uploaded_media = await self(
+            functions.messages.UploadMediaRequest(
+                peer=target_peer,
+                media=types.InputMediaUploadedDocument(
+                    file=uploaded,
+                    mime_type=mime,
+                    attributes=[types.DocumentAttributeFilename(os.path.basename(file_path))],
+                    force_file=force_file,
+                ),
+            )
+        )
         return utils.get_input_document(uploaded_media.document)
 
     async def copy_message(
@@ -335,9 +364,6 @@ class FridayTelegramClient(TelegramClient):
             message=text,
             reply_to=reply_to_message_id,
         )
-
-
-
 
 
 # Expose Client alias for legacy plugin imports

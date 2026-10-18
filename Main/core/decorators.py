@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -32,6 +32,7 @@ def inline_check(func: Callable) -> Callable:
             return await func(c, m, *args, **kwargs)
         except (errors.ChatSendInlineForbiddenError, errors.BotInlineDisabledError):
             from Main.internals.set_inline import set_inline_in_botfather
+
             status = await m.handle_message("INLINE_DISABLED")
             await set_inline_in_botfather(c)
             if status:
@@ -84,6 +85,7 @@ def iuser_check(func: Callable) -> Callable:
         # Lazy import avoids circular-import issues while keeping the reference
         # cheap after the first call (module is cached in sys.modules).
         import Main as _main_module
+
         users = _main_module.Friday.auth_users
         sender_id = getattr(update, "sender_id", None)
         if sender_id is None and hasattr(update, "from_user") and update.from_user:
@@ -132,6 +134,7 @@ def log_errors(func: Callable) -> Callable:
             pass
         except Exception as exc:
             import Main
+
             friday = Main.Friday
             tb = traceback.format_exc()
             logger.error(f"Error in {func.__name__}: {exc}\n{tb}")

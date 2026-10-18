@@ -1,18 +1,18 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
 import re
-import contextlib
 from Main.utils.suppress import suppress_error
 from typing import List, Tuple, Any
 from Main import Friday
 from Main.utils.custom_filters import filters
 from Main.core.decorators import log_errors
+from Main.utils.ui_tokens import NAV, STATUS
 from telethon import custom
 
 
@@ -50,8 +50,7 @@ def get_sessions_buttons(page: int = 1) -> Tuple[List[Any], bool, int]:
             f"session_info_{index}_{page}".encode("utf-8"),
         )
         for index, i in enumerate(Friday.clients)
-    ] + [custom.Button.inline("➕ Add a session", b"add_session")]
-    len_buttons = len(buttons)
+    ] + [custom.Button.inline(f"{NAV.ADD_ICON} Add a session", b"add_session")]
     pages = arrange_buttons(buttons, per_page)
     if not pages or page > len(pages):
         return [], False, 1
@@ -78,7 +77,7 @@ async def sessions_menu_cb_handler(c, cb):
     last_col = []
     if page > 1:
         last_col.append(custom.Button.inline("Previous", f"sessions_list_{page - 1}".encode("utf-8")))
-    last_col.append(custom.Button.inline(f"🔙 [{page}/{total_pages or 1}]", b"settings_menu"))
+    last_col.append(custom.Button.inline(f"{NAV.BACK_ICON} [{page}/{total_pages or 1}]", b"settings_menu"))
     if has_next:
         last_col.append(custom.Button.inline("Next", f"sessions_list_{page + 1}".encode("utf-8")))
     grid.append(last_col)
@@ -109,11 +108,11 @@ async def sessions_info_cb_handler(c, cb):
     )
     bttns = [
         [
-            custom.Button.inline("🔄 Refresh data", f"refresh_session_info_{index}".encode("utf-8")),
-            custom.Button.inline("🔗 Unlink (Remove)", f"unlink_session_{index}".encode("utf-8")),
+            custom.Button.inline(f"{NAV.REFRESH_ICON} Refresh data", f"refresh_session_info_{index}".encode("utf-8")),
+            custom.Button.inline(f"{STATUS.LINK} Unlink (Remove)", f"unlink_session_{index}".encode("utf-8")),
         ],
         [
-            custom.Button.inline("🔙 Back", f"sessions_list_{page}".encode("utf-8")),
+            custom.Button.inline(NAV.BACK, f"sessions_list_{page}".encode("utf-8")),
         ],
     ]
     await cb.edit(txt, buttons=bttns, parse_mode="html")
@@ -153,5 +152,5 @@ async def unlink_session_cb_handler(c, cb):
     # Return to sessions menu
     buttons, _, total_pages = get_sessions_buttons(1)
     grid = arrange_buttons(buttons, 3)
-    grid.append([custom.Button.inline("🔙 [1/1]", b"settings_menu")])
+    grid.append([custom.Button.inline(f"{NAV.BACK_ICON} [1/1]", b"settings_menu")])
     await cb.edit("Sessions", buttons=grid)

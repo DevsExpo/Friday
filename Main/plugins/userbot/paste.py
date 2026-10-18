@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -12,6 +12,7 @@ from Main import Friday
 from Main.core.types.client import FridayTelegramClient as Client
 from Main.utils.paste import Paste
 from Main.core.types.message import Message
+from Main.utils.ui_tokens import STATUS
 
 
 @Friday.register_on_cmd(
@@ -90,7 +91,9 @@ async def paste_cmd(c: Client, m: Message):
         chosen_service = chosen_service.lower().strip()
         if chosen_service not in valid_bins:
             bins_str = ", ".join(f"<code>{b}</code>" for b in valid_bins)
-            return await _m.edit_msg(f"❌ Invalid service '<code>{chosen_service}</code>'. Available services: {bins_str}")
+            return await _m.edit_msg(
+                f"{STATUS.ERROR} Invalid service '<code>{chosen_service}</code>'. Available services: {bins_str}"
+            )
 
     text = None
     if rm:
@@ -126,7 +129,9 @@ async def paste_cmd(c: Client, m: Message):
     author_name = getattr(c.myself, "first_name", "Friday")
     name, link = await Paste(text, author=author_name, title=title, service=chosen_service).paste()
     if not link:
-        return await _m.edit_msg("❌ <b>Failed to upload to pastebin services.</b> Please try again later.")
+        return await _m.edit_msg(
+            f"{STATUS.ERROR} <b>Failed to upload to pastebin services.</b> Please try again later."
+        )
 
     template = Friday.get_string("PASTE_TEXT") or "<b>Pasted to {1}:</b> <a href='{0}'>View Link</a>"
     await _m.edit(template.format(link, name), link_preview=False, parse_mode="html")

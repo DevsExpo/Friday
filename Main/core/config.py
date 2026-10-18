@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -18,7 +18,7 @@ from functools import wraps
 from typing import Any, List, Union, Optional
 from asyncio.events import AbstractEventLoop
 
-from .exceptions import NoDatabaseConnected, EnvVariableTypeError
+from .exceptions import EnvVariableTypeError
 
 dotenv.load_dotenv()
 logger = logging.getLogger("friday.config")
@@ -62,24 +62,20 @@ class BaseConfig:
     LOAD_ENV_TO_DB = os.getenv("LOAD_ENV_TO_DB", "false").lower() in {"true", "yes", "1"}
     CUSTOM_BT_START_MSG = os.getenv("CUSTOM_BT_START_MSG", "")
     SESSIONS = [i for i in os.getenv("SESSIONS", "").split(" ") if i.strip()]
-    API_ID = (
-        int(os.getenv("API_ID"))
-        if os.getenv("API_ID") and os.getenv("API_ID").strip().isdigit()
-        else 0
-    )
+    API_ID = int(os.getenv("API_ID")) if os.getenv("API_ID") and os.getenv("API_ID").strip().isdigit() else 0
     DISABLED_SUDO_CMD_LIST: List[str] = []
     API_HASH = os.getenv("API_HASH", "")
     HEROKU_APP_NAME = os.getenv("HEROKU_APP_NAME")
     HELP_MENU_ROWS = int(os.getenv("HELP_MENU_ROWS", 6)) if str(os.getenv("HELP_MENU_ROWS", "6")).isdigit() else 6
-    HELP_MENU_COLUMNS = int(os.getenv("HELP_MENU_COLUMNS", 3)) if str(os.getenv("HELP_MENU_COLUMNS", "3")).isdigit() else 3
+    HELP_MENU_COLUMNS = (
+        int(os.getenv("HELP_MENU_COLUMNS", 3)) if str(os.getenv("HELP_MENU_COLUMNS", "3")).isdigit() else 3
+    )
 
-    DEFAULT_REPO = "https://github.com/StarkGang/Friday"
+    DEFAULT_REPO = "https://github.com/DevsExpo/Friday"
     HEROKU_API_KEY = os.getenv("HEROKU_API_KEY")
     REPO = os.getenv("CUSTOM_REPO") or DEFAULT_REPO
 
-    UPDATE_ON_STARTUP = os.getenv("UPDATE_ON_STARTUP", "false").strip().lower() in {
-        "true", "yes", "1", "on"
-    }
+    UPDATE_ON_STARTUP = os.getenv("UPDATE_ON_STARTUP", "false").strip().lower() in {"true", "yes", "1", "on"}
     DB_NAME = os.getenv("DB_NAME", "Friday")
     DB_URI = os.getenv("DB_URI")
     RESOURCE_SAVER = os.getenv("RESOURCE_SAVER") or "true"
@@ -88,16 +84,14 @@ class BaseConfig:
     UB_LANG = os.getenv("UB_LANG")
     SUDO_CMD_HANDLER = os.getenv("SUDO_CMD_HANDLER") or "!"
     CMD_HANDLER = os.getenv("CMD_HANDLER") or "."
-    SUDO_USERS: List[int] = [
-        int(i)
-        for i in os.getenv("SUDO_USERS", "").split(" ")
-        if i.strip().lstrip("-").isdigit()
-    ]
+    SUDO_USERS: List[int] = [int(i) for i in os.getenv("SUDO_USERS", "").split(" ") if i.strip().lstrip("-").isdigit()]
 
     ALIVE_MEDIA = os.getenv("ALIVE_MEDIA")
     LOAD_XTRA_PLUGINS = os.getenv("LOAD_XTRA_PLUGINS", "true").lower() in {"true", "yes", "1", "enable"}
     XTRA_PLUGINS_REPOS: List[str] = [
-        r.strip() for r in re.split(r"[, ]+", os.getenv("XTRA_PLUGINS_REPOS", "https://github.com/StarkGang/XtraPlugins")) if r.strip()
+        r.strip()
+        for r in re.split(r"[, ]+", os.getenv("XTRA_PLUGINS_REPOS", "https://github.com/DevsExpo/XtraPlugins"))
+        if r.strip()
     ]
 
     def reload_from_env(self) -> None:
@@ -113,22 +107,20 @@ class BaseConfig:
         self.LOAD_ENV_TO_DB = os.getenv("LOAD_ENV_TO_DB", "false").lower() in {"true", "yes", "1"}
         self.CUSTOM_BT_START_MSG = os.getenv("CUSTOM_BT_START_MSG", "")
         self.SESSIONS = [i for i in os.getenv("SESSIONS", "").split(" ") if i.strip()]
-        self.API_ID = (
-            int(os.getenv("API_ID"))
-            if os.getenv("API_ID") and os.getenv("API_ID").strip().isdigit()
-            else 0
-        )
+        self.API_ID = int(os.getenv("API_ID")) if os.getenv("API_ID") and os.getenv("API_ID").strip().isdigit() else 0
         self.DISABLED_SUDO_CMD_LIST = []
         self.API_HASH = os.getenv("API_HASH", "")
         self.HEROKU_APP_NAME = os.getenv("HEROKU_APP_NAME")
-        self.HELP_MENU_ROWS = int(os.getenv("HELP_MENU_ROWS", 6)) if str(os.getenv("HELP_MENU_ROWS", "6")).isdigit() else 6
-        self.HELP_MENU_COLUMNS = int(os.getenv("HELP_MENU_COLUMNS", 3)) if str(os.getenv("HELP_MENU_COLUMNS", "3")).isdigit() else 3
-        self.DEFAULT_REPO = "https://github.com/StarkGang/Friday"
+        self.HELP_MENU_ROWS = (
+            int(os.getenv("HELP_MENU_ROWS", 6)) if str(os.getenv("HELP_MENU_ROWS", "6")).isdigit() else 6
+        )
+        self.HELP_MENU_COLUMNS = (
+            int(os.getenv("HELP_MENU_COLUMNS", 3)) if str(os.getenv("HELP_MENU_COLUMNS", "3")).isdigit() else 3
+        )
+        self.DEFAULT_REPO = "https://github.com/DevsExpo/Friday"
         self.HEROKU_API_KEY = os.getenv("HEROKU_API_KEY")
         self.REPO = os.getenv("CUSTOM_REPO") or self.DEFAULT_REPO
-        self.UPDATE_ON_STARTUP = os.getenv("UPDATE_ON_STARTUP", "false").strip().lower() in {
-            "true", "yes", "1", "on"
-        }
+        self.UPDATE_ON_STARTUP = os.getenv("UPDATE_ON_STARTUP", "false").strip().lower() in {"true", "yes", "1", "on"}
         self.DB_NAME = os.getenv("DB_NAME", "Friday")
         self.DB_URI = os.getenv("DB_URI")
         self.RESOURCE_SAVER = os.getenv("RESOURCE_SAVER") or "true"
@@ -137,15 +129,13 @@ class BaseConfig:
         self.UB_LANG = os.getenv("UB_LANG")
         self.SUDO_CMD_HANDLER = os.getenv("SUDO_CMD_HANDLER") or "!"
         self.CMD_HANDLER = os.getenv("CMD_HANDLER") or "."
-        self.SUDO_USERS = [
-            int(i)
-            for i in os.getenv("SUDO_USERS", "").split(" ")
-            if i.strip().lstrip("-").isdigit()
-        ]
+        self.SUDO_USERS = [int(i) for i in os.getenv("SUDO_USERS", "").split(" ") if i.strip().lstrip("-").isdigit()]
         self.ALIVE_MEDIA = os.getenv("ALIVE_MEDIA")
         self.LOAD_XTRA_PLUGINS = os.getenv("LOAD_XTRA_PLUGINS", "true").lower() in {"true", "yes", "1", "enable"}
         self.XTRA_PLUGINS_REPOS = [
-            r.strip() for r in re.split(r"[, ]+", os.getenv("XTRA_PLUGINS_REPOS", "https://github.com/StarkGang/XtraPlugins")) if r.strip()
+            r.strip()
+            for r in re.split(r"[, ]+", os.getenv("XTRA_PLUGINS_REPOS", "https://github.com/DevsExpo/XtraPlugins"))
+            if r.strip()
         ]
 
     def digit_wrap(self, digit_: Any) -> Union[str, int]:
@@ -186,7 +176,7 @@ class BaseConfig:
                         raw_data,
                     )
                 else:
-                    new_data = f'{raw_data}\nSESSIONS={" ".join(self.SESSIONS)}'
+                    new_data = f"{raw_data}\nSESSIONS={' '.join(self.SESSIONS)}"
                 f.write(new_data)
             logger.info("Session removed from .env")
         except Exception as e:
@@ -210,7 +200,7 @@ class BaseConfig:
                             raw_data,
                         )
                     else:
-                        new_data = f'{raw_data}\nSESSIONS={" ".join(self.SESSIONS)}'
+                        new_data = f"{raw_data}\nSESSIONS={' '.join(self.SESSIONS)}"
                     f.write(new_data)
                 logger.info("New session successfully appended to .env")
             except Exception as e:
@@ -355,10 +345,7 @@ class Config(BaseConfig):
         current_values = current if isinstance(current, list) else [current]
         remove_values = values if isinstance(values, (list, tuple, set)) else [values]
         remove_keys = {str(value).strip().casefold() for value in remove_values}
-        remaining = [
-            value for value in current_values
-            if str(value).strip().casefold() not in remove_keys
-        ]
+        remaining = [value for value in current_values if str(value).strip().casefold() not in remove_keys]
         if remaining == current_values:
             return remaining
         if remaining:
@@ -378,13 +365,9 @@ class Config(BaseConfig):
         if self.env_col is None:
             return
         if isinstance(update, dict):
-            await self.env_col.find_one_and_update(
-                {"_id": env_name}, update, upsert=upsert
-            )
+            await self.env_col.find_one_and_update({"_id": env_name}, update, upsert=upsert)
         else:
-            await self.env_col.find_one_and_update(
-                {"_id": env_name}, {"$set": {"env_value": update}}, upsert=upsert
-            )
+            await self.env_col.find_one_and_update({"_id": env_name}, {"$set": {"env_value": update}}, upsert=upsert)
 
     async def add_element_to_list(self, env_name: str, value: Any) -> None:
         if hasattr(self, "_env_cache"):
@@ -394,22 +377,16 @@ class Config(BaseConfig):
             return
         if self.env_col is None:
             return
-        await self.env_col.find_one_and_update(
-            {"_id": env_name}, {"$addToSet": {"env_value": value}}, upsert=True
-        )
+        await self.env_col.find_one_and_update({"_id": env_name}, {"$addToSet": {"env_value": value}}, upsert=True)
 
     async def pop_element_from_list(self, env_name: str, value: Any) -> None:
         if hasattr(self, "_env_cache"):
             self._env_cache.pop(env_name, None)
         if self.env_col is None:
             return
-        await self.env_col.find_one_and_update(
-            {"_id": env_name}, {"$pull": {"env_value": value}}
-        )
+        await self.env_col.find_one_and_update({"_id": env_name}, {"$pull": {"env_value": value}})
 
-    async def sync_env_to_db(
-        self, env_name: str, env_value: Any, upsert: bool = False, push_: bool = False
-    ) -> Any:
+    async def sync_env_to_db(self, env_name: str, env_value: Any, upsert: bool = False, push_: bool = False) -> Any:
         if self.env_col is None:
             return None
         existing = await self.get_env_from_db(env_name)
@@ -437,9 +414,7 @@ class Config(BaseConfig):
             user_id = [int(user_id)]
         elif isinstance(user_id, list):
             user_id = [int(i) for i in user_id]
-        await self.add_env_to_db(
-            "SUDO_USERS", {"$push": {"user_ids": {"$each": user_id}}}, upsert=True
-        )
+        await self.add_env_to_db("SUDO_USERS", {"$push": {"user_ids": {"$each": user_id}}}, upsert=True)
 
     @var_check
     async def get_sudo(self) -> List[int]:
@@ -463,9 +438,7 @@ class Config(BaseConfig):
     async def del_sudo(self, user_id: Union[int, str]) -> None:
         if self.env_col is None:
             return
-        await self.env_col.find_one_and_update(
-            {"_id": "SUDO_USERS"}, {"$pull": {"user_ids": int(user_id)}}
-        )
+        await self.env_col.find_one_and_update({"_id": "SUDO_USERS"}, {"$pull": {"user_ids": int(user_id)}})
 
     async def get_pm_sts(self) -> bool:
         val = await self.get_env("PM_PERMIT")
@@ -499,8 +472,6 @@ class Config(BaseConfig):
         self._env_cache[key] = val
         setattr(self, key, val)
         await self.add_env_to_db(key, val, upsert=True)
-
-
 
     async def get_progress_bar_sts(self) -> bool:
         val = await self.get_env("USE_PROGRESS_BAR")

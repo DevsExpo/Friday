@@ -1,8 +1,8 @@
-# Copyright (C) 2021-present by StarkGang@Github, < https://github.com/StarkGang >.
+# Copyright (C) 2021-present by DevsExpo@Github, < https://github.com/DevsExpo >.
 #
-# This file is part of < https://github.com/StarkGang/Friday > project,
+# This file is part of < https://github.com/DevsExpo/Friday > project,
 # and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/StarkGang/Friday/blob/main/LICENSE >
+# Please see < https://github.com/DevsExpo/Friday/blob/main/LICENSE >
 #
 # All rights reserved.
 
@@ -37,13 +37,7 @@ def gen_random_useragent():
     browser = random.choice(["chrome", "firefox", "ie"])
     if browser == "chrome":
         webkit = str(random.randint(500, 599))
-        version = (
-            str(random.randint(0, 24))
-            + ".0"
-            + str(random.randint(0, 1500))
-            + "."
-            + str(random.randint(0, 999))
-        )
+        version = str(random.randint(0, 24)) + ".0" + str(random.randint(0, 1500)) + "." + str(random.randint(0, 999))
         return (
             "Mozilla/5.0 ("
             + gen_os
@@ -80,20 +74,11 @@ def gen_random_useragent():
                 "15.0",
             ]
         )
-        return (
-            "Mozilla/5.0 ("
-            + gen_os
-            + "; rv:"
-            + version
-            + ") Gecko/"
-            + gecko
-            + " Firefox/"
-            + version
-        )
+        return "Mozilla/5.0 (" + gen_os + "; rv:" + version + ") Gecko/" + gecko + " Firefox/" + version
     elif browser == "ie":
         version = f"{str(random.randint(1, 10))}.0"
         engine = f"{str(random.randint(1, 5))}.0"
-        if option := random.choice([True, False]):
+        if random.choice([True, False]):
             token = (
                 random.choice(
                     [
@@ -107,16 +92,6 @@ def gen_random_useragent():
                 )
                 + "; "
             )
-        elif option == False:
+        else:
             token = ""
-        return (
-            "Mozilla/5.0 (compatible; MSIE "
-            + version
-            + "; "
-            + gen_os
-            + "; "
-            + token
-            + "Trident/"
-            + engine
-            + ")"
-        )
+        return "Mozilla/5.0 (compatible; MSIE " + version + "; " + gen_os + "; " + token + "Trident/" + engine + ")"
