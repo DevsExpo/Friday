@@ -31,7 +31,10 @@ def verify_owner(m: Message) -> bool:
     ["fpm", "fpmpanel"],
     cmd_help={
         "help": "Open the interactive FPM Control Center or install packages.",
-        "example": "fpm (opens interactive control panel)\nfpm https://github.com/...",
+        "example": [
+            "fpm",
+            "fpmpanel",
+        ],
     },
 )
 async def fpm_hub_cmd(c, m: Message):
@@ -49,7 +52,11 @@ async def fpm_hub_cmd(c, m: Message):
 @Friday.register_on_cmd(
     ["fpm_install", "fpminstall"],
     cmd_help={
-        "example": "fpm_install vc (auto-maps to StarkGang/VCPlugin)\nfpm_install https://github.com/username/XtraPlugins -sub media,lifestyle",
+        "example": [
+            "fpm_install vc",
+            "fpm_install StarkGang/VCPlugin",
+            "fpm_install https://github.com/username/XtraPlugins -sub media",
+        ],
         "help": "Install external plugins with optional subcategory segregation and fast dependency resolution. Supports shortcuts like 'vc' for StarkGang/VCPlugin.",
         "user_args": [
             {
@@ -141,7 +148,10 @@ async def install_pack(c, m: Message):
     ["fpm_list", "fpmlist", "plugins"],
     cmd_help={
         "help": "List all installed external plugins with version and active segregated subcategories.",
-        "example": "fpm_list",
+        "example": [
+            "fpm_list",
+            "plugins",
+        ],
     },
 )
 async def list_packages(c, m: Message):
@@ -174,7 +184,10 @@ async def list_packages(c, m: Message):
     ["fpm_sub", "fpmsub", "subcategories"],
     cmd_help={
         "help": "Inspect segregated subcategories of an installed plugin and their enabled status.",
-        "example": "fpm_sub XtraPlugins",
+        "example": [
+            "fpm_sub XtraPlugins",
+            "fpmsub VCPlugin",
+        ],
     },
     requires_input=True,
 )
@@ -216,7 +229,10 @@ async def list_plugin_subcategories(c, m: Message):
     ["fpm_enable", "fpmenable"],
     cmd_help={
         "help": "Enable and hot-load a segregated subcategory in an installed plugin.",
-        "example": "fpm_enable XtraPlugins media",
+        "example": [
+            "fpm_enable XtraPlugins media",
+            "fpmenable XtraPlugins games",
+        ],
     },
     requires_input=True,
 )
@@ -242,7 +258,10 @@ async def enable_subcategory_cmd(c, m: Message):
     ["fpm_disable", "fpmdisable"],
     cmd_help={
         "help": "Disable a segregated subcategory in an installed plugin without deleting files.",
-        "example": "fpm_disable XtraPlugins shopping",
+        "example": [
+            "fpm_disable XtraPlugins lifestyle",
+            "fpmdisable XtraPlugins system",
+        ],
     },
     requires_input=True,
 )

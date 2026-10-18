@@ -45,7 +45,13 @@ def bulletify(u_):
 
 @Friday.register_on_cmd(
     "dpfs",
-    cmd_help={"help": "Disabled cmds for sudo users!", "example": "dpfs eval"},
+    cmd_help={
+        "help": "Disabled cmds for sudo users!",
+        "example": [
+            "dpfs eval",
+            "dpfs exec, sh",
+        ],
+    },
     requires_input=True,
 )
 async def disabled_ps_func(c: Client, m: Message):
@@ -86,7 +92,10 @@ async def remove_disabled_ps_func(c: Client, m: Message):
     "addsudo",
     cmd_help={
         "help": "Add a user to sudo list",
-        "example": "addsudo @username",
+        "example": [
+            "addsudo @username",
+            "addsudo 123456789",
+        ],
     },
 )
 async def add_sudo_func(c: Client, m: Message):
@@ -118,7 +127,11 @@ async def add_sudo_func(c: Client, m: Message):
     "rmsudo",
     cmd_help={
         "help": "Remove sudo from sudo list",
-        "example": "rmsudo @username",
+        "example": [
+            "rmsudo @username",
+            "rmsudo 123456789",
+            "rmsudo -a",
+        ],
         "user_args": [
             {
                 "arg": "a",
@@ -170,7 +183,10 @@ async def rm_sudo_func(c: Client, m: Message):
     "listsudo",
     cmd_help={
         "help": "list all sudo users!",
-        "example": "listsudo or listsudo -basic",
+        "example": [
+            "listsudo",
+            "listsudo -basic",
+        ],
         "user_args": [
             {
                 "arg": "basic",

@@ -20,7 +20,15 @@ USER_CHAT_CACHE = []
 
 
 @Friday.register_on_cmd(
-    ["gban"], cmd_help={"help": "To globally ban a user", "example": "gban <userid>"}
+    ["gban"],
+    cmd_help={
+        "help": "To globally ban a user across all managed groups.",
+        "example": [
+            "gban @spammer",
+            "gban 123456789",
+            "gban (replying to user) Raiding chats",
+        ],
+    },
 )
 async def gban(c: Client, m: Message):
     start_time = time.time()
@@ -72,7 +80,14 @@ async def gban(c: Client, m: Message):
 
 @Friday.register_on_cmd(
     ["ungban"],
-    cmd_help={"help": "To globally unban a user", "example": "ungban <userid>"},
+    cmd_help={
+        "help": "To globally unban a user across all managed groups.",
+        "example": [
+            "ungban @user",
+            "ungban 123456789",
+            "ungban (replying to user)",
+        ],
+    },
 )
 async def ungban(c: Client, m: Message):
     msg = await m.handle_message("PROCESSING")

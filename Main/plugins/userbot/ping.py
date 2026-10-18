@@ -20,7 +20,10 @@ from Main.core.decorators import inline_check
     bot_mode_unsupported=True,
     cmd_help={
         "help": "Ping userbot",
-        "example": "ping",
+        "example": [
+            "ping",
+            "ping -c",
+        ],
         "user_args": [
             {
                 "arg": "c",

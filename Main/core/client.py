@@ -684,7 +684,7 @@ class FridayClient:
         private_only: bool,
         bot_mode_unsupported: bool = False,
     ) -> None:
-        example = html.escape(str(help_map.get("example", "No example available")))
+        example = help_map.get("example", "No example available")
         help_text = html.escape(str(help_map.get("help", "Sorry, No help available for this command")))
         user_args = help_map.get("user_args")
         if isinstance(commands, str):
@@ -1026,7 +1026,32 @@ class FridayClient:
                 self._command_help_message_data[p_name] += "\n"
 
                 if ex_text:
-                    self._command_help_message_data[p_name] += f"<b>Example:</b> <code>{self.user_command_handler}{ex_text}</code>\n"
+                    examples_list = []
+                    if isinstance(ex_text, (list, tuple)):
+                        examples_list = list(ex_text)
+                    elif isinstance(ex_text, str) and ex_text.strip():
+                        if "\n" in ex_text:
+                            examples_list = [line.strip() for line in ex_text.splitlines() if line.strip()]
+                        else:
+                            examples_list = [ex_text.strip()]
+
+                    prefix = getattr(self, "user_command_handler", ".") or "."
+                    formatted_examples = []
+                    for ex in examples_list:
+                        clean_ex = str(ex).strip()
+                        for pfx in (".", "!", "/", "?", "$"):
+                            if clean_ex.startswith(pfx) and len(clean_ex) > 1 and clean_ex[1] not in (" ", "."):
+                                clean_ex = clean_ex[1:].strip()
+                                break
+                        formatted_examples.append(f"{prefix}{clean_ex}")
+
+                    if formatted_examples:
+                        if len(formatted_examples) == 1:
+                            self._command_help_message_data[p_name] += f"<b>Example:</b> <code>{html.escape(formatted_examples[0])}</code>\n"
+                        else:
+                            self._command_help_message_data[p_name] += "<b>Examples:</b>\n"
+                            for fex in formatted_examples:
+                                self._command_help_message_data[p_name] += f"  • <code>{html.escape(fex)}</code>\n"
                 if user_args:
                     self._command_help_message_data[p_name] += "<b>Flags:</b>\n"
                     for arg in user_args:
@@ -1034,6 +1059,8 @@ class FridayClient:
                         arg_help = arg.get("help", "")
                         req = " <i>[input required]</i>" if arg.get("requires_input", False) else ""
                         self._command_help_message_data[p_name] += f"  • <code>-{arg_name}</code>: {arg_help}{req}\n"
+
+    _build_command_help_message = prepare_help
 
     def get_plugin_category(self, plugin_name: str) -> str:
         p_name = plugin_name.lower()

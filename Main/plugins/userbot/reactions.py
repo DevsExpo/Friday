@@ -21,7 +21,11 @@ from Main.core.types import FridayTelegramClient as Client, Message
     ["react", "reaction"],
     cmd_help={
         "help": "React to a replied message with an emoji.",
-        "example": "react 👍",
+        "example": [
+            "react 👍",
+            "react 🔥",
+            "react ❤️ -big",
+        ],
         "user_args": [
             {"arg": "big", "help": "Use a big reaction (Premium).", "requires_input": False},
         ],
@@ -52,7 +56,10 @@ async def react_to_message(c: Client, m: Message):
     ["unreact", "unreaxt", "removereact"],
     cmd_help={
         "help": "Remove your reaction from a replied message.",
-        "example": "unreact",
+        "example": [
+            "unreact",
+            "removereact",
+        ],
     },
     requires_reply=True,
 )
@@ -76,7 +83,10 @@ async def remove_reaction(c: Client, m: Message):
     ["reactstats", "reacstats", "reactions"],
     cmd_help={
         "help": "Show reaction statistics for a replied message.",
-        "example": "reactstats",
+        "example": [
+            "reactstats",
+            "reactions",
+        ],
     },
     requires_reply=True,
 )

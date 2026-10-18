@@ -19,7 +19,10 @@ welcome_db = Friday.db.make_collection("WELCOME")
     ["savewelcome", "addwelcome"],
     cmd_help={
         "help": "Save welcome message in a chat.",
-        "example": "savewelcome Hello {first} , how are you?",
+        "example": [
+            "savewelcome (replying to welcome message)",
+            "addwelcome (replying to photo or video)",
+        ],
     },
     requires_reply=True,
 )
@@ -51,7 +54,10 @@ async def add_welcome_cmd(c: Client, m: Message):
     ["delwelcome", "rmwelcome"],
     cmd_help={
         "help": "Removes the welcome message saved i the chat.",
-        "example": "rmwelcome",
+        "example": [
+            "delwelcome",
+            "rmwelcome",
+        ],
     },
 )
 async def del_welcome_cmd(c: Client, m: Message):
@@ -66,7 +72,10 @@ async def del_welcome_cmd(c: Client, m: Message):
     ["welcome", "welcomesettings"],
     cmd_help={
         "help": "Shows current welcome settings in the chat.",
-        "example": "",
+        "example": [
+            "welcome",
+            "welcomesettings",
+        ],
     },
 )
 async def welcome_settings_cmd(c: Client, m: Message):

@@ -26,7 +26,12 @@ afk_sanity_check: dict = {}
     bot_mode_unsupported=True,
     cmd_help={
         "help": "Set AFK.",
-        "example": "afk i am currently outside",
+        "example": [
+            "afk",
+            "afk Busy studying, will reply later",
+            "afk -hls Working on project",
+            "afk -dlm Traveling today",
+        ],
         "user_args": [
             {"arg": "hls", "help": "Hides last seen in afk.", "requires_input": False},
             {

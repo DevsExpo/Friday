@@ -146,12 +146,25 @@ class LocalDatabase:
             return {"ok": 1.0}
         if cmd == "dbstats":
             return {"dataSize": 0, "storageSize": 0}
-        return {}
+    def close(self) -> None:
+        self._sync_flush()
+
+    async def list_collection_names(self) -> List[str]:
+        return list(self.data.keys())
+
+    async def drop_collection(self, name: str) -> None:
+        await self.make_collection(name).drop()
 
 
 class InsertOneResult:
     def __init__(self, inserted_id: Any) -> None:
         self.inserted_id = inserted_id
+
+
+class InsertManyResult:
+    def __init__(self, inserted_ids: List[Any]) -> None:
+        self.inserted_ids = inserted_ids
+        self.acknowledged = True
 
 
 class DeleteResult:
@@ -311,6 +324,62 @@ class LocalCollection:
         if not query:
             return len(self._col())
         return sum(1 for doc in self._col() if PyMongoInstructionParser.match_document(doc, query))
+
+    async def insert_many(self, documents: List[Dict[str, Any]]) -> InsertManyResult:
+        ids = []
+        for document in documents:
+            doc = dict(document)
+            doc_id = str(doc.get("_id", uuid.uuid4().hex))
+            doc["_id"] = doc_id
+            self._col().append(doc)
+            ids.append(doc_id)
+        self._db.save()
+        return InsertManyResult(ids)
+
+    async def replace_one(
+        self, query: Dict[str, Any], replacement: Dict[str, Any], upsert: bool = False
+    ) -> UpdateResult:
+        for i, doc in enumerate(self._col()):
+            if PyMongoInstructionParser.match_document(doc, query):
+                new_doc = dict(replacement)
+                new_doc["_id"] = doc.get("_id", uuid.uuid4().hex)
+                self._col()[i] = new_doc
+                self._db.save()
+                return UpdateResult(1, 1)
+        if upsert:
+            new_doc = dict(replacement)
+            if "_id" not in new_doc:
+                new_doc["_id"] = uuid.uuid4().hex
+            self._col().append(new_doc)
+            self._db.save()
+            return UpdateResult(0, 1)
+        return UpdateResult(0, 0)
+
+    async def distinct(self, key: str, query: Dict[str, Any] = {}) -> List[Any]:
+        seen = set()
+        result = []
+        for doc in self._col():
+            if PyMongoInstructionParser.match_document(doc, query):
+                val = doc.get(key)
+                if val is not None:
+                    try:
+                        if val not in seen:
+                            seen.add(val)
+                            result.append(val)
+                    except TypeError:
+                        if val not in result:
+                            result.append(val)
+        return result
+
+    async def drop(self) -> None:
+        self._db.data[self._name] = []
+        self._db.save()
+
+    async def create_index(self, *args, **kwargs) -> None:
+        pass
+
+    async def drop_index(self, *args, **kwargs) -> None:
+        pass
 
     def __aiter__(self) -> "LocalCollectionCursor":
         return LocalCollectionCursor(self._col())
@@ -641,6 +710,79 @@ class SQLCollection:
         self._init_done = False
         await self._db._execute(f"DROP TABLE IF EXISTS {self._table}")
 
+    async def insert_many(self, documents: List[Dict[str, Any]]) -> InsertManyResult:
+        await self._ensure_table()
+        ids = []
+        for document in documents:
+            doc = dict(document)
+            doc_id = str(doc.get("_id", uuid.uuid4().hex))
+            doc["_id"] = doc_id
+            payload = json.dumps(doc)
+            if self._db.dialect in ("postgresql", "postgres"):
+                await self._db._execute(
+                    f"INSERT INTO {self._table} (_id, data) VALUES ($1, $2) ON CONFLICT (_id) DO UPDATE SET data = $2",
+                    (doc_id, payload),
+                )
+            else:
+                await self._db._execute(
+                    f"INSERT OR REPLACE INTO {self._table} (_id, data) VALUES (?, ?)",
+                    (doc_id, payload),
+                )
+            ids.append(doc_id)
+        return InsertManyResult(ids)
+
+    async def replace_one(
+        self, query: Dict[str, Any], replacement: Dict[str, Any], upsert: bool = False
+    ) -> UpdateResult:
+        await self._ensure_table()
+        existing = await self.find_one(query)
+        if existing:
+            doc_id = str(existing.get("_id"))
+            new_doc = dict(replacement)
+            new_doc["_id"] = doc_id
+            payload = json.dumps(new_doc)
+            if self._db.dialect in ("postgresql", "postgres"):
+                await self._db._execute(
+                    f"UPDATE {self._table} SET data = $1 WHERE _id = $2",
+                    (payload, doc_id),
+                )
+            else:
+                await self._db._execute(
+                    f"UPDATE {self._table} SET data = ? WHERE _id = ?",
+                    (payload, doc_id),
+                )
+            return UpdateResult(1, 1)
+        elif upsert:
+            new_doc = dict(replacement)
+            if "_id" not in new_doc:
+                new_doc["_id"] = uuid.uuid4().hex
+            await self.insert_one(new_doc)
+            return UpdateResult(0, 1)
+        return UpdateResult(0, 0)
+
+    async def distinct(self, key: str, query: Dict[str, Any] = {}) -> List[Any]:
+        cursor = self.find(query)
+        docs = await cursor.to_list()
+        seen = set()
+        result = []
+        for doc in docs:
+            val = doc.get(key)
+            if val is not None:
+                try:
+                    if val not in seen:
+                        seen.add(val)
+                        result.append(val)
+                except TypeError:
+                    if val not in result:
+                        result.append(val)
+        return result
+
+    async def create_index(self, *args, **kwargs) -> None:
+        pass
+
+    async def drop_index(self, *args, **kwargs) -> None:
+        pass
+
 
 class SQLDatabase:
     """
@@ -897,6 +1039,61 @@ class RedisCollection:
 
     async def drop(self) -> None:
         await self._db._client.delete(self._key)
+
+    async def insert_many(self, documents: List[Dict[str, Any]]) -> InsertManyResult:
+        client = self._db._client
+        ids = []
+        mapping = {}
+        for document in documents:
+            doc = dict(document)
+            doc_id = str(doc.get("_id", uuid.uuid4().hex))
+            doc["_id"] = doc_id
+            mapping[doc_id] = json.dumps(doc)
+            ids.append(doc_id)
+        if mapping:
+            await client.hset(self._key, mapping=mapping)
+        return InsertManyResult(ids)
+
+    async def replace_one(
+        self, query: Dict[str, Any], replacement: Dict[str, Any], upsert: bool = False
+    ) -> UpdateResult:
+        existing = await self.find_one(query)
+        if existing:
+            doc_id = str(existing.get("_id"))
+            new_doc = dict(replacement)
+            new_doc["_id"] = doc_id
+            await self._db._client.hset(self._key, doc_id, json.dumps(new_doc))
+            return UpdateResult(1, 1)
+        elif upsert:
+            new_doc = dict(replacement)
+            if "_id" not in new_doc:
+                new_doc["_id"] = uuid.uuid4().hex
+            await self.insert_one(new_doc)
+            return UpdateResult(0, 1)
+        return UpdateResult(0, 0)
+
+    async def distinct(self, key: str, query: Dict[str, Any] = {}) -> List[Any]:
+        cursor = self.find(query)
+        docs = await cursor.to_list()
+        seen = set()
+        result = []
+        for doc in docs:
+            val = doc.get(key)
+            if val is not None:
+                try:
+                    if val not in seen:
+                        seen.add(val)
+                        result.append(val)
+                except TypeError:
+                    if val not in result:
+                        result.append(val)
+        return result
+
+    async def create_index(self, *args, **kwargs) -> None:
+        pass
+
+    async def drop_index(self, *args, **kwargs) -> None:
+        pass
 
 
 class RedisDatabase:

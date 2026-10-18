@@ -19,7 +19,13 @@ from Main.core.types.message import Message
     bot_mode_unsupported=True,
     cmd_help={
         "help": "Upload text or file content to online pastebin services. Use flags to select your preferred service.",
-        "example": "paste -dpaste (replying to message) or paste -spacebin <text>",
+        "example": [
+            "paste (replying to text or file)",
+            "paste Hello world this is a test",
+            "paste -dpaste Some code here",
+            "paste -spacebin",
+            "paste -pasters",
+        ],
         "user_args": [
             {
                 "arg": "dpaste",

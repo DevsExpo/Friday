@@ -15,7 +15,14 @@ from Main.utils.essentials import Essentials
 
 @Friday.register_on_cmd(
     ["download"],
-    cmd_help={"help": "Download files from telegram", "example": "download"},
+    cmd_help={
+        "help": "Download files from telegram to local storage.",
+        "example": [
+            "download (replying to file)",
+            "download custom_name.zip",
+            "download -sethumb (replying to photo)",
+        ],
+    },
     requires_reply=True,
 )
 async def download_files_from_telegram(c, m: Message):
@@ -38,7 +45,13 @@ async def download_files_from_telegram(c, m: Message):
 
 @Friday.register_on_cmd(
     ["upload"],
-    cmd_help={"help": "Upload files to telegram", "example": "upload Friday.log"},
+    cmd_help={
+        "help": "Upload files from host system to telegram.",
+        "example": [
+            "upload Friday.log",
+            "upload ./temp/downloads/file.zip",
+        ],
+    },
     requires_input=True,
 )
 async def upload_files_to_telegram(c, m: Message):

@@ -17,7 +17,10 @@ from telethon import custom
     ["mentions"],
     cmd_help={
         "help": "To toggle notify mentions globally.",
-        "example": "mentions (on/off)",
+        "example": [
+            "mentions on",
+            "mentions off",
+        ],
     },
     group_only=False,
     requires_input=True,

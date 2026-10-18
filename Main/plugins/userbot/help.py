@@ -41,7 +41,12 @@ async def lang_modify(c: Client, m: Message):
     bot_mode_unsupported=True,
     cmd_help={
         "help": "Display the interactive inline help menu or text help for a specific plugin.",
-        "example": "help or help -basic or help paste",
+        "example": [
+            "help",
+            "help -basic",
+            "help paste",
+            "help chess",
+        ],
         "user_args": [
             {
                 "arg": "basic",

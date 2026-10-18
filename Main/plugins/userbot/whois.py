@@ -21,8 +21,13 @@ b3 = bullets.get("bullet3", "▶")
 @Friday.register_on_cmd(
     ["whois", "ui", "info", "userinfo", "uinfo"],
     cmd_help={
-        "help": "To get user info!",
-        "example": "whois <reply/user id/username>",
+        "help": "Get profile and entity details of a user, group, or yourself.",
+        "example": [
+            "whois",
+            "whois @username",
+            "whois 123456789",
+            "info (replying to user)",
+        ],
     },
 )
 async def userinfo(c: Client, m: Message):

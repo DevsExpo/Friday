@@ -19,7 +19,10 @@ from Main.utils.essentials import Essentials
     "alive",
     cmd_help={
         "help": "Checks Alive status of UB",
-        "example": "alive or alive -basic",
+        "example": [
+            "alive",
+            "alive -basic",
+        ],
         "user_args": [
             {
                 "arg": "basic",

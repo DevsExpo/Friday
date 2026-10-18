@@ -22,7 +22,11 @@ logger = logging.getLogger("friday.whisper")
     bot_mode_unsupported=True,
     cmd_help={
         "help": "Send an encrypted whisper message that only the recipient (and you) can view.",
-        "example": "whisper (replying to user) <secret message> or whisper @username <secret message>",
+        "example": [
+            "whisper (replying to user) Secret note",
+            "whisper @username Secret note",
+            "w @username Secret note",
+        ],
     },
 )
 async def whisper_cmd(c: Client, m: Message):
