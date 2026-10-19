@@ -9,7 +9,7 @@ markdown
 motor>=3.4
 pymongo>=4.7
 gtts>=2.5
-psutil>=5.9
+psutil>=7.2.2
 hachoir>=3.3
 cachetools>=5.3
 tinytag>=1.10
