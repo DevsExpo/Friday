@@ -1,5 +1,5 @@
 aiofiles>=23.0
-beautifulsoup4>=4.12
+beautifulsoup4>=4.15.0
 certifi
 dnspython>=2.6
 telethon>=1.36.0
