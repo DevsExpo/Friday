@@ -20,6 +20,10 @@ from typing import Any, List, Optional, Tuple, Union
 from telethon import errors
 from telethon.tl.patched import Message as TelethonMessage
 from telethon.tl.custom import Message as CustomMessage
+import Main
+from Main.utils.paste import Paste
+from Main.utils.essentials import Essentials
+from Main.utils.file_helpers import make_file_from_text
 
 logger = logging.getLogger("friday.message")
 
@@ -342,9 +346,7 @@ class Message(TelethonMessage):
         """Dynamically resolve the trigger prefix used in this command, falling back to configured user command handler."""
         text = self.text or getattr(self, "raw_text", None) or getattr(self, "message", None) or ""
         try:
-            from Main import Friday
-
-            default_pfx = getattr(Friday, "user_command_handler", ".") or "."
+            default_pfx = getattr(getattr(Main, "Friday", None), "user_command_handler", ".") or "."
         except Exception:
             default_pfx = "."
 
@@ -460,10 +462,6 @@ class Message(TelethonMessage):
         del_in: Optional[int] = None,
         **args,
     ) -> Any:
-        import Main
-        from Main.utils.paste import Paste
-        from Main.utils.essentials import Essentials
-        from Main.utils.file_helpers import make_file_from_text
 
         friday = Main.Friday
         s_args = args.pop("string_args", None)
@@ -545,10 +543,6 @@ class Message(TelethonMessage):
         del_in: Optional[int] = None,
         **args,
     ) -> Any:
-        import Main
-        from Main.utils.paste import Paste
-        from Main.utils.essentials import Essentials
-        from Main.utils.file_helpers import make_file_from_text
 
         friday = Main.Friday
         s_args = args.pop("string_args", None)

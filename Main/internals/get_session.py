@@ -18,6 +18,9 @@ from Main import Friday
 from Main.utils.custom_filters import filters
 from Main.core.decorators import log_errors
 from Main.internals.make_session import persist_and_finalize_session, is_twp_authorized
+from Main.internals.make_session import _PENDING_LOGINS
+from Main.utils.suppress import suppress_error
+from Main.plugins.bot.help import get_help_menu, help_text
 
 
 def _get_db_badge() -> str:
@@ -140,9 +143,6 @@ def get_main_start_dashboard(mention: str = "User") -> tuple:
 @log_errors
 async def bot_start_menu_cb_handler(c, cq):
     # Cancel any pending login / conversation locks
-    from Main.internals.make_session import _PENDING_LOGINS
-    from Main.utils.suppress import suppress_error
-
     _PENDING_LOGINS.discard(cq.chat_id)
     if hasattr(Friday.bot, "_conversations"):
         with suppress_error():
@@ -171,11 +171,6 @@ async def start_command_handler(c, m):
     sender_id = getattr(m, "sender_id", None)
     if sender_id is None and hasattr(m, "from_user") and m.from_user:
         sender_id = getattr(m.from_user, "id", None)
-
-    # Cancel any stuck logins / conversations for this user
-    from Main.internals.make_session import _PENDING_LOGINS
-    from Main.utils.suppress import suppress_error
-
     _PENDING_LOGINS.discard(sender_id)
     if hasattr(Friday.bot, "_conversations"):
         with suppress_error():
@@ -188,7 +183,6 @@ async def start_command_handler(c, m):
     if payload == "help" or payload.startswith("help"):
         if not sender_id or sender_id not in Friday.auth_users:
             return await m.reply("⚠️ <i>You are not authorized to use this bot.</i>", parse_mode="html")
-        from Main.plugins.bot.help import get_help_menu, help_text
 
         buttons = await get_help_menu(category="all", page=0)
         return await m.reply(help_text, buttons=buttons, parse_mode="html")
@@ -252,8 +246,6 @@ async def add_session_yes_cb_handler(c, cb):
 
     await cb.answer()
     if hasattr(Friday.bot, "_conversations"):
-        from Main.utils.suppress import suppress_error
-
         with suppress_error():
             for c_obj in list(Friday.bot._conversations.get(cb.chat_id, set())):
                 c_obj._cancel_all()

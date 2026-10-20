@@ -38,8 +38,8 @@ class MongoDB:
             serverSelectionTimeoutMS=10_000,
             connectTimeoutMS=10_000,
             socketTimeoutMS=30_000,
-            maxPoolSize=50,
-            minPoolSize=5,
+            maxPoolSize=10,
+            minPoolSize=1,
         )
         self._db_name: AsyncIOMotorDatabase = self._client[db_name]
 
@@ -658,6 +658,21 @@ class SQLCollection:
 
     async def delete_many(self, query: Dict[str, Any]) -> DeleteResult:
         await self._ensure_table()
+        if not query:
+            rows = await self._db._fetchall(f"SELECT COUNT(*) FROM {self._table}")
+            total = int(rows[0][0]) if rows else 0
+            await self._db._execute(f"DELETE FROM {self._table}")
+            return DeleteResult(total)
+        try:
+            where_sql, params = PyMongoInstructionParser.to_sql_where(query, dialect=self._db.dialect)
+            if where_sql:
+                ph_rows = await self._db._fetchall(f"SELECT _id FROM {self._table}{where_sql}", tuple(params))
+                if not ph_rows:
+                    return DeleteResult(0)
+                await self._db._execute(f"DELETE FROM {self._table}{where_sql}", tuple(params))
+                return DeleteResult(len(ph_rows))
+        except Exception:
+            pass
         cursor = self.find(query)
         matching = await cursor.to_list()
         if not matching:
@@ -683,9 +698,18 @@ class SQLCollection:
         if not query:
             rows = await self._db._fetchall(f"SELECT COUNT(*) FROM {self._table}")
             return int(rows[0][0]) if rows else 0
+        try:
+            where_sql, params = PyMongoInstructionParser.to_sql_where(query, dialect=self._db.dialect)
+            if where_sql:
+                rows = await self._db._fetchall(f"SELECT COUNT(*) FROM {self._table}{where_sql}", tuple(params))
+                return int(rows[0][0]) if rows else 0
+        except Exception:
+            pass
         cursor = self.find(query)
-        docs = await cursor.to_list()
-        return len(docs)
+        count = 0
+        async for _ in cursor:
+            count += 1
+        return count
 
     async def drop(self) -> None:
         self._init_done = False

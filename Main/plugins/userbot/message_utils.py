@@ -19,8 +19,8 @@ from Main.utils.file_helpers import run_in_exc
 from Main.utils.ui_tokens import STATUS
 from gtts import gTTS, lang
 
-# In-memory TTL caches for instant repeat lookups
-_TRANSLATION_CACHE: TTLCache = TTLCache(maxsize=1000, ttl=86400)
+# In-memory TTL caches for instant repeat lookups (hashed keys to save memory)
+_TRANSLATION_CACHE: TTLCache = TTLCache(maxsize=500, ttl=86400)
 _TTS_CACHE: TTLCache = TTLCache(maxsize=100, ttl=3600)
 
 LANGUAGES = {
@@ -143,7 +143,7 @@ def _resolve_lang_code(val: str) -> Optional[str]:
 
 
 async def _async_translate(c: Client, text: str, dest: str, src: str = "auto") -> Tuple[Optional[str], str]:
-    cache_key = (text, src, dest)
+    cache_key = (hash(text), src, dest)
     if cache_key in _TRANSLATION_CACHE:
         return _TRANSLATION_CACHE[cache_key]
 
@@ -211,7 +211,7 @@ async def tts_now(c: Client, m: Message):
         await msg_.edit_msg("INVALID_LANG")
         lang_ = "en"
 
-    cache_key = (rm.text.strip(), lang_)
+    cache_key = (hash(rm.text.strip()), lang_)
     file_ = _TTS_CACHE.get(cache_key)
     if not file_ or not os.path.exists(file_):
         file_ = await tts_(rm.text, lang_)

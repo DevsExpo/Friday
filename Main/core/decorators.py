@@ -13,6 +13,11 @@ import traceback
 import contextlib
 from functools import wraps
 from typing import Any, Callable, List, Union
+import Main
+
+
+def _get_friday():
+    return getattr(Main, "Friday", None)
 
 from telethon import errors, events
 from telethon.events import StopPropagation
@@ -82,11 +87,8 @@ def iuser_check(func: Callable) -> Callable:
 
     @wraps(func)
     async def wrapper(client: Any, update: Any, *args, **kwargs) -> Any:
-        # Lazy import avoids circular-import issues while keeping the reference
-        # cheap after the first call (module is cached in sys.modules).
-        import Main as _main_module
-
-        users = _main_module.Friday.auth_users
+        friday = _get_friday()
+        users = friday.auth_users if friday else []
         sender_id = getattr(update, "sender_id", None)
         if sender_id is None and hasattr(update, "from_user") and update.from_user:
             sender_id = getattr(update.from_user, "id", None)
@@ -133,9 +135,9 @@ def log_errors(func: Callable) -> Callable:
         ):
             pass
         except Exception as exc:
-            import Main
-
-            friday = Main.Friday
+            friday = _get_friday()
+            if not friday:
+                return
             tb = traceback.format_exc()
             logger.error(f"Error in {func.__name__}: {exc}\n{tb}")
             target_chat = friday.log_chat or getattr(friday.config, "OWNER_ID", None)

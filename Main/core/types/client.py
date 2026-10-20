@@ -15,6 +15,8 @@ import mimetypes
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from telethon import TelegramClient, functions, types, errors, utils
+from cachetools import TTLCache
+from Main.core.types.message import enrich_message
 
 logger = logging.getLogger("friday.client")
 
@@ -64,18 +66,14 @@ class FridayTelegramClient(TelegramClient):
         patch_telethon_html()
         self.parse_mode = "html"
         self.myself: Optional[types.User] = None
-        self._permission_cache: Dict[int, Dict[str, Any]] = {}
+        self._permission_cache: TTLCache = TTLCache(maxsize=1000, ttl=1800)
 
     async def send_message(self, *args, **kwargs) -> Any:
         res = await super().send_message(*args, **kwargs)
-        from Main.core.types.message import enrich_message
-
         return enrich_message(res, self)
 
     async def edit_message(self, *args, **kwargs) -> Any:
         res = await super().edit_message(*args, **kwargs)
-        from Main.core.types.message import enrich_message
-
         return enrich_message(res, self)
 
     async def send_file(self, *args, **kwargs) -> Any:
@@ -93,8 +91,6 @@ class FridayTelegramClient(TelegramClient):
                 file_name=fname,
             )
         res = await super().send_file(*args, **kwargs)
-        from Main.core.types.message import enrich_message
-
         return enrich_message(res, self)
 
     async def invoke(self, query: Any, *args, **kwargs) -> Any:

@@ -10,7 +10,12 @@ from __future__ import annotations
 
 import re
 from Main.utils.suppress import suppress_error
+import Main
 from typing import Any, Callable, List, Union
+
+
+def _get_friday():
+    return getattr(Main, "Friday", None)
 
 
 class Filter:
@@ -90,10 +95,8 @@ class Filters:
                         if hasattr(client, "myself") and client.myself:
                             bot_username = (getattr(client.myself, "username", "") or "").lower()
                         elif hasattr(client, "get_me"):
-                            import Main
-
                             bot_username = (
-                                getattr(getattr(Main.Friday, "bot_info", None), "username", "") or ""
+                                getattr(getattr(_get_friday(), "bot_info", None), "username", "") or ""
                             ).lower()
                         at_target = first_word.split("@", 1)[1]
                         if not bot_username or at_target == bot_username:
@@ -227,9 +230,7 @@ def user_filters(cmd: Union[str, List[str]], disable_sudo: bool = False) -> Filt
         if not text or not isinstance(text, str) or len(text) < 2:
             return False
 
-        import Main
-
-        friday = Main.Friday
+        friday = _get_friday()
         user_prefix = getattr(friday, "user_command_handler", ".") or "."
         sudo_prefix = getattr(friday, "sudo_cmd_handler", "!") or "!"
 

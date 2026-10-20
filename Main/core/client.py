@@ -21,6 +21,7 @@ import random
 import asyncio
 import inspect
 import logging
+from logging.handlers import RotatingFileHandler
 import importlib
 import traceback
 import contextlib
@@ -50,6 +51,7 @@ from ..utils.custom_filters import filters as default_filters, Filter
 from Main.utils.heroku_ import prepare_heroku_url
 from ..utils.multi_lang_helpers import get_all_files_in_path
 from ..utils.command import resolve_command
+from .localization import LocalizationManager
 
 logger = logging.getLogger("Friday")
 
@@ -154,21 +156,22 @@ class FridayClient:
         self.bot: BotWrapper = BotWrapper(self)
         self.clients: List[FridayTelegramClient] = []
         self.cmd_list: Dict[str, List[Dict[str, Any]]] = {}
-        self.all_lang_strings: Dict[str, Any] = {}
-        self.__version__ = "0.2.0"
-        self.selected_lang = "english"
         self.local_lang_file = str(Path(__file__).resolve().parents[1] / "localization")
+        self._localization_mgr = LocalizationManager(Path(self.local_lang_file))
+        self.all_lang_strings = self._localization_mgr.all_lang_strings
+        self.__version__ = "0.2.0"
         self.start_time = time.time()
         self.app_url_ = None
         self.disabled_sudo_plugin_list: List[str] = []
-        self.SELF_PERMISSION_CACHE = TTLCache(99999, ttl=60 * 60, timer=time.perf_counter)
+        self.SELF_PERMISSION_CACHE = TTLCache(2000, ttl=60 * 60, timer=time.perf_counter)
         self.loaded_bot_cmds = False
         self.cmd_list_s: List[str] = []
         self.training_wheels_protocol = False
         self._init_logger()
 
         self.local_db = SQLDatabase("sqlite:///friday.db", db_name="Friday", dialect="sqlite")
-        self.executor = ThreadPoolExecutor(max_workers=multiprocessing.cpu_count() * 5)
+        max_workers = min(32, (multiprocessing.cpu_count() or 1) * 2 + 4)
+        self.executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="friday_worker")
         self._mongo_db: Optional[MongoDB] = None
         self.config: Config = Config(self.local_db.env_col, executor=self.executor)
         self.log_chat = None
@@ -207,7 +210,10 @@ class FridayClient:
             level=logging.INFO,
             datefmt="[%d/%m/%Y %H:%M:%S]",
             format="%(asctime)s - [Friday] >> %(levelname)s << %(message)s",
-            handlers=[logging.FileHandler("friday.log"), logging.StreamHandler()],
+            handlers=[
+                RotatingFileHandler("friday.log", maxBytes=10 * 1024 * 1024, backupCount=2, encoding="utf-8"),
+                logging.StreamHandler(),
+            ],
         )
         self.log("Initialized Logger successfully!")
 
@@ -272,6 +278,11 @@ class FridayClient:
 
     async def _db_setup(self) -> None:
         with contextlib.suppress(Exception):
+            from Main.utils.file_helpers import purge_stale_files
+            purged = purge_stale_files()
+            if purged:
+                self.log(f"Cleaned {purged} stale temporary file(s).")
+        with contextlib.suppress(Exception):
             await self.update_on_startup()
         await self.resolve_dns()
         target_uri = self.config.DB_URI or "sqlite:///friday.db"
@@ -297,63 +308,33 @@ class FridayClient:
 
         return wrapper
 
+    @property
+    def selected_lang(self) -> str:
+        if hasattr(self, "_localization_mgr"):
+            return self._localization_mgr.selected_lang
+        return "english"
+
+    @selected_lang.setter
+    def selected_lang(self, lang: str) -> None:
+        if hasattr(self, "_localization_mgr"):
+            self._localization_mgr.set_language(lang)
+
     def setup_localization_sync(self) -> None:
-        all_files = get_all_files_in_path(self.local_lang_file)
-        for filepath in all_files:
-            if not str(filepath).endswith((".yaml", ".yml")):
-                continue
-            with open(filepath, encoding="utf-8") as f:
-                try:
-                    data = yaml.safe_load(f)
-                except Exception:
-                    continue
-                if not isinstance(data, dict):
-                    continue
-                language_to_load = data.get("language")
-                if language_to_load and language_to_load != "template":
-                    self.all_lang_strings[language_to_load] = data
-        self.selected_lang = self.selected_lang if self.selected_lang in self.all_lang_strings else "english"
+        if hasattr(self, "_localization_mgr"):
+            self._localization_mgr.setup_sync()
 
     async def setup_localization(self) -> None:
         lang = await self.config.get_env("UB_LANG") if hasattr(self.config, "get_env") else None
         selected_lang = lang.lower() if lang else "english"
         self.setup_localization_sync()
-        if selected_lang in self.all_lang_strings:
-            self.selected_lang = selected_lang
-        else:
-            self.selected_lang = "english"
+        if hasattr(self, "_localization_mgr"):
+            self._localization_mgr.set_language(selected_lang)
         self.log("Localization setup complete!")
 
     def get_string(self, keyword: str, *args: Any, string_args: Any = None, **kwargs: Any) -> Optional[str]:
-        # Lookup in selected language, fallback to english
-        str_ing = None
-        for lang_name in (self.selected_lang, "english"):
-            lang_dict = self.all_lang_strings.get(lang_name)
-            if lang_dict and isinstance(lang_dict, dict) and keyword in lang_dict:
-                str_ing = lang_dict[keyword]
-                break
-
-        if str_ing is None or not isinstance(str_ing, str):
-            return str_ing
-
-        fmt_args = string_args if string_args is not None else (args if args else None)
-        if fmt_args is not None or kwargs:
-            try:
-                if fmt_args is not None and kwargs:
-                    return (
-                        str_ing.format(*fmt_args, **kwargs)
-                        if isinstance(fmt_args, (list, tuple))
-                        else str_ing.format(fmt_args, **kwargs)
-                    )
-                elif fmt_args is not None:
-                    return (
-                        str_ing.format(*fmt_args) if isinstance(fmt_args, (list, tuple)) else str_ing.format(fmt_args)
-                    )
-                elif kwargs:
-                    return str_ing.format(**kwargs)
-            except Exception:
-                return str_ing
-        return str_ing
+        if hasattr(self, "_localization_mgr"):
+            return self._localization_mgr.get_string(keyword, *args, string_args=string_args, **kwargs)
+        return None
 
     def on_message(self, custom_filters: Any = None, group: int = 1, bot_mode_unsupported: bool = False):
         def decorator(func: Callable):

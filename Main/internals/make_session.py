@@ -184,11 +184,10 @@ async def persist_and_finalize_session(app, session_str: str, chat_id: int):
 @Friday.bot.on_callback_query(filters.regex(r"^session_no"))
 @log_errors
 async def add_session_cb_handler(_, cb):
-    sender_id = getattr(cb, "sender_id", 0)
+    chat_id = sender_id = getattr(cb, "sender_id", 0)
     if not is_twp_authorized(sender_id):
         return await cb.answer("⛔ Access Denied: Setup is locked to the owner.", alert=True)
 
-    chat_id = cb.chat_id
     if chat_id in _PENDING_LOGINS or chat_id in _ACTIVE_LOGINS:
         return await cb.answer(
             "⚠️ Login is already in progress! Please enter your code/password or /cancel.", alert=True
@@ -207,7 +206,6 @@ async def add_session_cb_handler(_, cb):
         _PENDING_LOGINS.discard(chat_id)
         return await Friday.bot.send_message(chat_id, "API_ID or API_HASH is not set in config.")
 
-    # 1. Ask phone number in bounded conversation and exit conversation immediately
     phone_number = None
     try:
         if hasattr(Friday.bot, "_conversations"):

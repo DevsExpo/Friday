@@ -24,7 +24,7 @@ logger = logging.getLogger("friday.help")
 async def lang_modify(c: Client, m: Message):
     rm = m.reply_to_message
     if not getattr(Friday, "bot_info", None):
-        return await m.handle_message("Assistant bot is not configured or running.")
+        return await m.handle_message("ASSISTANT_NOT_CONFIGURED")
     try:
         results = await c.get_inline_bot_results(Friday.bot_info.username, "change_lang")
         if results:
@@ -32,7 +32,7 @@ async def lang_modify(c: Client, m: Message):
             return await m.delete_if_self()
     except Exception as e:
         logger.warning(f"Language modify inline failed: {e}")
-        return await m.handle_message(f"Failed to open language wizard: {e}")
+        return await m.handle_message("LANG_WIZARD_FAILED", string_args=(e,))
 
 
 @Friday.register_on_cmd(
@@ -110,7 +110,6 @@ async def help_normal(c: Client, m: Message):
                 bot_reason = f"Inline help failed ({e.__class__.__name__}): {e}"
                 logger.error(f"[.help] {bot_reason}", exc_info=True)
 
-    # Text menu fallback or direct plugin help
     notice = (
         f"{STATUS.WARNING} <i>Inline menu unavailable: {html.escape(bot_reason)}</i>\n\n"
         if bot_reason and "-basic" not in m.user_args and not is_bot

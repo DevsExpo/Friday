@@ -12,11 +12,13 @@ import random
 import string
 import asyncio
 import multiprocessing
+import time
 from functools import wraps
 from concurrent.futures.thread import ThreadPoolExecutor
 
 
-executor = ThreadPoolExecutor(max_workers=multiprocessing.cpu_count() * 5)
+_max_workers = min(16, (multiprocessing.cpu_count() or 1) * 2 + 2)
+executor = ThreadPoolExecutor(max_workers=_max_workers, thread_name_prefix="friday_file_worker")
 
 
 def run_in_exc(func_):
@@ -57,3 +59,44 @@ def make_folder(folder_name=None):
         os.remove(folder_name)
     os.makedirs(folder_name)
     return os.path.exists(folder_name)
+
+
+def purge_stale_files(
+    directories: list[str] | None = None,
+    max_age_seconds: int = 3600,
+    exclude: set[str] | None = None,
+) -> int:
+    """
+    Safely purges temporary and cached files older than max_age_seconds.
+    Explicitly protects user assets like 'thumb.jpg'.
+    """
+    if directories is None:
+        directories = ["./temp", "./cache"]
+    if exclude is None:
+        exclude = {"thumb.jpg", ".gitkeep"}
+
+    now = time.time()
+    deleted_count = 0
+
+    for d in directories:
+        dir_path = os.path.abspath(d)
+        if not os.path.exists(dir_path) or not os.path.isdir(dir_path):
+            continue
+        try:
+            for root, _, files in os.walk(dir_path):
+                for f in files:
+                    if f in exclude:
+                        continue
+                    full_path = os.path.join(root, f)
+                    try:
+                        mtime = os.path.getmtime(full_path)
+                        if now - mtime > max_age_seconds:
+                            os.remove(full_path)
+                            deleted_count += 1
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+    return deleted_count
+

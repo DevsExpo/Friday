@@ -16,6 +16,18 @@ from Main.core.config import TGLIMITS
 from Main.core.types.message import Message
 from Main.utils.dev_func import eval_py, exec_terminal
 from Main.utils.ui_tokens import STATUS
+from Main.utils.inline_helper import is_owner
+
+
+def verify_owner(m: Message) -> bool:
+    sender_id = getattr(m, "sender_id", None)
+    if sender_id is None and hasattr(m, "from_user") and m.from_user:
+        sender_id = getattr(m.from_user, "id", None)
+    if is_owner(sender_id):
+        return True
+    if getattr(m, "is_self", False):
+        return True
+    return False
 
 
 @Friday.register_on_cmd(
@@ -84,6 +96,10 @@ async def get_json_message_handler(c: Client, m: Message):
     just_exc=True,
 )
 async def evaluate_command_handler(c: Client, m: Message):
+    if not verify_owner(m):
+            return await m.handle_message(
+            Friday.get_string("DEVTOOLS_SECURITY_VIOLATION_EXEC") or "Security Violation: Only the userbot owner can execute py code."
+        )
     msg_id = m.id
     m_ = await m.handle_message("PROCESSING")
     is_owner = (
@@ -93,7 +109,7 @@ async def evaluate_command_handler(c: Client, m: Message):
     )
     if not is_owner:
         return await m_.edit_msg(
-            f"{STATUS.ERROR} <b>Security Violation:</b> <code>Only the userbot owner can evaluate code.</code>"
+            Friday.get_string("DEVTOOLS_SECURITY_VIOLATION_EVAL") or "Security Violation: Only the userbot owner can evaluate code."
         )
 
     user_args = m.user_args
@@ -104,7 +120,7 @@ async def evaluate_command_handler(c: Client, m: Message):
     if "p" in user_args or "f" in user_args:
         cmd = (cmd.replace("-p", "").replace("-f", "")).strip()
     results = await eval_py(c, cmd, m)
-    final_output = f"<b>INPUT:</b>\n<code>{cmd}</code>\n\n<b>OUTPUT</b>:\n<pre>{results.strip()}</pre>"
+    final_output = f"<b>INPUT:</b>\n<code>{cmd}</code>\n\n{Friday.get_string('OUTPUT') or 'OUTPUT'}:\n<pre>{results.strip() or Friday.get_string('NO_OUTPUT') or 'No output'}</pre>"
     cmd_ = "<b>Output Of Command</b>" if len(cmd) >= 1000 else f"<b>OUTPUT FOR COMMAND :</b> <code>{cmd}</code>"
 
     temp_dir = os.path.abspath("./temp")
@@ -122,7 +138,7 @@ async def evaluate_command_handler(c: Client, m: Message):
                 os.remove(file_path)
         else:
             await c.send_message(Friday.log_chat, final_output, parse_mode="html")
-        return await m.edit_msg("<b>OUTPUT sent to log chat!</b>")
+        return await m_.edit_msg("DEVTOOLS_OUTPUT_SENT_LOGS")
 
     await m_.edit_msg(
         final_output,
@@ -158,16 +174,10 @@ async def evaluate_command_handler(c: Client, m: Message):
     },
 )
 async def terminal(c: Client, m: Message):
-    is_owner = (
-        m.out
-        or (getattr(m, "from_user", None) and getattr(m.from_user, "is_self", False))
-        or (m.sender_id and m.sender_id == getattr(c.myself, "id", None))
-    )
-    if not is_owner:
-        return await m.handle_message(
-            f"{STATUS.ERROR} <b>Security Violation:</b> <code>Only the userbot owner can execute terminal commands.</code>"
+    if not verify_owner(m):
+            return await m.handle_message(
+            Friday.get_string("DEVTOOLS_SECURITY_VIOLATION_TERM") or "Security Violation: Only the userbot owner can execute terminal commands."
         )
-
     user_args = m.user_args
     bash_code = m.raw_user_input
     if not bash_code:
@@ -178,8 +188,8 @@ async def terminal(c: Client, m: Message):
         bash_code = (bash_code.replace("-p", "").replace("-f", "")).strip()
     success, output, return_code = await exec_terminal(bash_code)
     out_text = f"<b>Input:</b>\n<code>{bash_code}</code>"
-    out_text += f"\n\n<b>{Friday.get_string('OUTPUT') or 'Output'}:</b>\n<pre>{output or Friday.get_string('NO_OUTPUT') or 'No output'}</pre>\n"
-    out_text += f"<b>Status:</b> <i>{'Success' if success else 'Failed'}</i> (<code>{return_code}</code>)"
+    out_text += f"\n\n{Friday.get_string('OUTPUT') or 'Output'}:\n<pre>{output or Friday.get_string('NO_OUTPUT') or 'No output'}</pre>\n"
+    out_text += Friday.get_string("DEVTOOLS_STATUS").format("Success" if success else "Failed", return_code)
     caption_ = "<b>OUTPUT OF CMD EXECUTED</b>"
 
     temp_dir = os.path.abspath("./temp")
@@ -197,7 +207,7 @@ async def terminal(c: Client, m: Message):
                 os.remove(file_path)
         else:
             await c.send_message(Friday.log_chat, out_text, parse_mode="html")
-        return await m_.edit_msg("<b>OUTPUT sent to log chat!</b>")
+        return await m.edit_msg("DEVTOOLS_OUTPUT_SENT_LOGS")
 
     return await m_.edit_msg(
         out_text,
@@ -211,7 +221,7 @@ async def paste_logs(log_path: str) -> str:
     async with aiofiles.open(log_path, mode="r", encoding="utf-8", errors="ignore") as f:
         file_c = await f.read()
         name, link = await Paste(file_c).paste()
-    return f"<b>LOGS PASTED TO {name.upper()}:</b> <a href='{link}'>View</a>"
+    return Friday.get_string("DEVTOOLS_LOGS_PASTED").format(name.upper(), link)
 
 
 @Friday.register_on_cmd(
@@ -254,10 +264,10 @@ async def logs(c: Client, m: Message):
 
     if "s" in log__args_ and Friday.log_chat:
         if "p" not in log__args_:
-            await c.send_file(Friday.log_chat, log_file_, caption="Friday Logs")
+            await c.send_file(Friday.log_chat, log_file_, caption=Friday.get_string("DEVTOOLS_LOGS_CAPTION") or "Friday Logs")
         else:
             await c.send_message(Friday.log_chat, await paste_logs(log_file_), parse_mode="html")
-        return await MSG.edit_msg("<b>Logs sent to log chat!</b>")
+        return await MSG.edit_msg("DEVTOOLS_LOGS_SENT")
 
     if "p" in log__args_:
         return await MSG.edit_msg(await paste_logs(log_file_))
@@ -268,7 +278,7 @@ async def logs(c: Client, m: Message):
     await c.send_file(
         m.chat.id,
         log_file_,
-        caption=f"Retrieved logs in <code>{time_taken}s</code>.",
+        caption=Friday.get_string("DEVTOOLS_LOGS_RETRIEVED").format(time_taken),
         reply_to=m.id,
         parse_mode="html",
     )

@@ -20,6 +20,25 @@ try:
 except ImportError:
     bullets = {}
 
+from pathlib import Path
+
+# Set this to your actual project root
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def get_safe_path(user_input: str = "") -> Path | None:
+    try:
+        requested = Path(user_input) if user_input else Path(".")
+        if requested.is_absolute():
+            resolved = requested.resolve(strict=True)
+        else:
+            resolved = (PROJECT_ROOT / requested).resolve(strict=True)
+        if not resolved.is_relative_to(PROJECT_ROOT):
+            return None
+        return resolved
+    except (OSError, ValueError, RuntimeError):
+        return None
+
 b1 = bullets.get("bullet1", ">")
 b2 = bullets.get("bullet2", "•")
 b3 = bullets.get("bullet3", "⋟")
@@ -38,13 +57,20 @@ def readable(data):
 )
 async def listdir_cmd_handler(c: Client, m: Message):
     msg = await m.handle_message("PROCESSING")
-    input_ = m.raw_user_input
-    if input_:
-        if not exists(input_):
-            return await msg.edit(f"<b>Directory,</b> <code>{input_}</code> <b>doesn't exist.</b>")
-        if isfile(input_):
-            return await msg.edit(f"<code>{input_}</code> <b>is a file not a directory.</b>")
-    target_dir = input_ or "."
+    input_ = (m.raw_user_input or "").strip()
+    target_dir = get_safe_path(input_)
+
+    if target_dir is None:
+        return await msg.edit(
+            f"<b>Invalid directory or access denied:</b> <code>{input_ or '.'}</code>"
+        )
+
+    if not target_dir.is_dir():
+        return await msg.edit(
+            f"<code>{input_ or '.'}</code> <b>is not a directory.</b>"
+        )
+    if not target_dir:
+        return await msg.edit(f"<code>{input_}</code> <b>is an invalid directory.</b>")
     files = []
     folders = []
     lists = sorted(ls(target_dir))
@@ -70,15 +96,16 @@ async def listdir_cmd_handler(c: Client, m: Message):
     await msg.edit_msg(f"{output_}")
 
 
+
 @Friday.register_on_cmd(
     ["remove", "rm"],
     cmd_help={
-        "help": "Removes given directory or file from the system.",
+        "help": "Removes files or directories inside the project.",
         "example": "rm -a |*.log",
         "user_args": [
             {
                 "arg": "d",
-                "help": "to remove a directory from the system.",
+                "help": "to remove an empty directory.",
                 "requires_input": False,
             },
             {
@@ -92,53 +119,125 @@ async def listdir_cmd_handler(c: Client, m: Message):
 )
 async def remove_cmd_handler(c: Client, m: Message):
     msg = await m.handle_message("PROCESSING")
-    input_ = m.raw_user_input
-    u_input = m.user_input
-    target_check = (u_input or input_ or "").strip().rstrip("\\/").lower()
-    if not target_check or target_check in ("/", "\\", "c:", "c:\\", "c:/", ".", "..") or len(target_check) <= 2:
-        return await msg.edit(
-            f"{STATUS.ERROR} <b>Security Violation:</b> <code>Cannot delete root or parent filesystem directories.</code>"
-        )
-    if user_args := m.user_args:
-        if "d" in user_args:
-            try:
-                if not exists(u_input):
-                    return await msg.edit(f"<b>Directory,</b> <code>{u_input}</code> <b>doesn't exist.</b>")
-                elif isfile(u_input):
-                    await msg.edit(f"<code>{u_input}</code> <b>is a file not a directory.</b>")
-                else:
-                    rmdir(u_input)
-                    await msg.edit(f"<b>Folder,</b> <code>{u_input}</code> <b>has been removed successfully.</b>")
-            except OSError as traceback:
-                return await msg.edit(
-                    f"<b>Unable to delete</b>, <code>{u_input}</code>.\n\n<i><b><u>Traceback:</u></b></i>\n\n<code>{traceback}</code>"
-                )
-        elif "a" in user_args:
-            if "|*." not in u_input:
-                return await msg.edit_msg("INVALID_INPUT")
-            data = u_input.split("*")
-            if data[0] == "|" or data[1] == ".":
-                return await msg.edit_msg("INVALID_INPUT")
-            data[0] = data[0].replace("|", "")
-            if not exists(data[0]):
-                return await msg.edit(f"<b>Directory,</b> <code>{data[0]}</code> <b>doesn't exist.</b>")
-            elif isfile(data[0]):
-                await msg.edit(f"<code>{data}</code> <b>is a file not a directory.</b>")
-            else:
-                lists = sorted(ls(data[0]))
-                count = 0
-                for i in lists:
-                    if isfile(f"{data[0]}/{i}") and i.endswith(data[1]):
-                        rm(f"{data[0]}/{i}")
-                        count += 1
-                await msg.edit(
-                    f"<b>Removed all files ending with</b> <code>{data[1]}</code> <b>in</b> <code>{data[0]}</code> <b>(</b><code>{count}</code><b>).</b>"
+    input_ = (m.raw_user_input or "").strip()
+    u_input = (m.user_input or "").strip()
+    user_args = m.user_args or []
+
+    if "d" in user_args:
+        target = get_safe_path(u_input)
+
+        if target is None:
+            return await msg.edit(
+                f"{STATUS.ERROR} <b>Invalid path or access denied.</b>"
+            )
+
+        if target == PROJECT_ROOT:
+            return await msg.edit(
+                f"{STATUS.ERROR} <b>Cannot delete project root.</b>"
+            )
+
+        if not target.is_dir():
+            return await msg.edit(
+                f"<code>{u_input}</code> <b>is not a directory.</b>"
+            )
+
+        try:
+            target.rmdir()
+            return await msg.edit(
+                f"<b>Folder,</b> <code>{u_input}</code> "
+                "<b>has been removed successfully.</b>"
+            )
+        except OSError as error:
+            return await msg.edit(
+                f"<b>Unable to delete</b> <code>{u_input}</code>.\n\n"
+                f"<code>{error}</code>"
+            )
+
+    elif "a" in user_args:
+        if "|*." not in u_input:
+            return await msg.edit_msg("INVALID_INPUT")
+
+        directory_part, extension = u_input.split("*", 1)
+        directory_input = directory_part.removesuffix("|").strip()
+        extension = extension.strip()
+
+        if (
+            not directory_input
+            or not extension.startswith(".")
+            or extension in (".", "..")
+            or any(char in extension for char in ("/", "\\", "*", "|"))
+        ):
+            return await msg.edit_msg("INVALID_INPUT")
+
+        target_dir = get_safe_path(directory_input)
+
+        if target_dir is None:
+            return await msg.edit(
+                f"{STATUS.ERROR} <b>Invalid directory or access denied.</b>"
+            )
+
+        if not target_dir.is_dir():
+            return await msg.edit(
+                f"<code>{directory_input}</code> "
+                "<b>is a file, not a directory.</b>"
+            )
+
+        count = 0
+
+        try:
+            for entry in target_dir.iterdir():
+                if entry.is_symlink() or not entry.is_file():
+                    continue
+
+                if not entry.name.endswith(extension):
+                    continue
+
+                safe_entry = get_safe_path(
+                    str(entry.relative_to(PROJECT_ROOT))
                 )
 
-    elif not exists(input_):
-        return await msg.edit(f"<b>File,</b> <code>{input_}</code> <b>doesn't exist.</b>")
-    elif isdir(input_):
-        await msg.edit(f"<code>{input_}</code> <b>is a directory not a file.</b>")
+                if safe_entry is None or safe_entry != entry:
+                    continue
+
+                safe_entry.unlink()
+                count += 1
+
+        except OSError as error:
+            return await msg.edit(
+                f"<b>Unable to delete files.</b>\n\n"
+                f"<code>{error}</code>\n"
+                f"<b>Files removed:</b> <code>{count}</code>"
+            )
+
+        return await msg.edit(
+            f"<b>Removed all files ending with</b> "
+            f"<code>{extension}</code> <b>in</b> "
+            f"<code>{directory_input}</code> "
+            f"(<code>{count}</code>)."
+        )
+
     else:
-        rm(input_)
-        await msg.edit(f"<b>File,</b> <code>{input_}</code> <b>has been removed successfully.</b>")
+        target = get_safe_path(input_)
+
+        if target is None:
+            return await msg.edit(
+                f"{STATUS.ERROR} <b>Invalid path or access denied.</b>"
+            )
+
+        if target.is_dir():
+            return await msg.edit(
+                f"<code>{input_}</code> "
+                "<b>is a directory, not a file.</b>"
+            )
+
+        try:
+            target.unlink()
+            return await msg.edit(
+                f"<b>File,</b> <code>{input_}</code> "
+                "<b>has been removed successfully.</b>"
+            )
+        except OSError as error:
+            return await msg.edit(
+                f"<b>Unable to delete</b> <code>{input_}</code>.\n\n"
+                f"<code>{error}</code>"
+            )

@@ -20,14 +20,20 @@ from mimetypes import guess_type
 from Main.utils.paste import Paste
 from Main.core.types import Message, FridayTelegramClient
 from Main.utils.essentials import Essentials
+from Main.utils.ui_tokens import STATUS
+from Main.utils.inline_helper import is_owner
 
 
-# from telegraph import Telegraph, upload_file
 
-
-# telegraph = Telegraph()
-# res = telegraph.create_account(short_name="Friday")
-# auth_url = res["auth_url"]
+def verify_owner(m: Message) -> bool:
+    sender_id = getattr(m, "sender_id", None)
+    if sender_id is None and hasattr(m, "from_user") and m.from_user:
+        sender_id = getattr(m.from_user, "id", None)
+    if is_owner(sender_id):
+        return True
+    if getattr(m, "is_self", False):
+        return True
+    return False
 
 
 def fileToBase64(file_path: str) -> str:
@@ -100,6 +106,10 @@ def get_info(value=False) -> tuple:
     },
 )
 async def sTATS(c: FridayTelegramClient, m: Message):
+    if not verify_owner(m):
+            return await m.handle_message(
+            f"{STATUS.ERROR} <b>Security Violation:</b> <code>Only the userbot owner retrieve this info.</code>"
+        )
     msg = await m.handle_message("PROCESSING")
     value = m.user_args and m.user_args.a
     ub_stat = await get_info(value)
@@ -142,21 +152,3 @@ async def file_to_b64(c: FridayTelegramClient, m: Message):
         if file and os.path.exists(file):
             rmv(file)
 
-
-# @Friday.register_on_cmd(
-#     ["telegraph", "tg"],
-#     cmd_help={
-#         "help": "upload files to telegraph",
-#         "cmd_help": "telegraph <reply to media>",
-#     },
-#     requires_reply=True,
-# )
-# async def download_files_from_telegram(c, m):
-#     msg = await m.handle_message("PROCESSING")
-#     if not m.reply_to_message.media:
-#         return await msg.edit_msg("REPLY_TO_FILE")
-#     media = await m.reply_to_message.download()
-#     media_url = upload_file(media)
-#     await msg.edit(f"https://graph.org{media_url[0]}")
-#     if os.path.exists(media):
-#         os.remove(media)

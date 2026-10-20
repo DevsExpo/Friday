@@ -294,8 +294,9 @@ class Config(BaseConfig):
             return from_env
 
         attr_val = getattr(self, env_key, None)
-        if attr_val is not None:
-            self._env_cache[env_key] = attr_val
+        self._env_cache[env_key] = attr_val
+        if as_list and not isinstance(attr_val, (list, tuple)):
+            return [attr_val] if attr_val is not None else []
         return attr_val
 
     def get_env_(self, env_key: str, as_list: bool) -> Any:

@@ -17,7 +17,8 @@ from functools import wraps
 from concurrent.futures.thread import ThreadPoolExecutor
 
 
-executor = ThreadPoolExecutor(max_workers=multiprocessing.cpu_count() * 5)
+_max_workers = min(8, (multiprocessing.cpu_count() or 1) + 2)
+executor = ThreadPoolExecutor(max_workers=_max_workers, thread_name_prefix="friday_indexer")
 
 
 def run_in_exc(func_):
