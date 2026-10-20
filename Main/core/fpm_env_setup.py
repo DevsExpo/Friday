@@ -211,8 +211,16 @@ def verify_and_install_dependencies(check_only: bool = False) -> bool:
     if check_only:
         return False
 
-    print("\n📦 [FPM ENV] Batch-installing missing dependencies cleanly via pip...")
-    cmd = [sys.executable, "-m", "pip", "install", "--prefer-binary", *missing]
+    print(f"\n📦 [FPM ENV] Batch-installing missing dependencies cleanly via pip...")
+    _TOKEN_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9._\-]*[A-Za-z0-9])?([><=!~^][^\s]*)?$")
+    safe_missing = [d for d in missing if _TOKEN_RE.match(d) and not d.startswith("-")]
+    rejected = set(missing) - set(safe_missing)
+    if rejected:
+        print(f"⚠️  [FPM ENV] Rejected unsafe dependency tokens: {rejected}")
+    if not safe_missing:
+        print("❌ [FPM ENV] No safe dependencies to install after sanitisation.")
+        return False
+    cmd = [sys.executable, "-m", "pip", "install", "--prefer-binary", "--no-input", "--", *safe_missing]
     try:
         subprocess.run(cmd, check=True)
         print("✅ [FPM ENV] Successfully installed all required plugin dependencies!")
@@ -279,9 +287,14 @@ def sync_xtra_plugins_repos() -> bool:
                 if rev.returncode == 0:
                     is_valid_repo = True
 
+            # P2: Reject URLs that start with '-' (git argument injection)
+            if not repo_url or repo_url.lstrip().startswith("-"):
+                raise ValueError(f"Unsafe repo URL rejected: {repo_url!r}")
+
             if not target_dir.exists():
                 print(f"[XTRA PLUGINS] Cloning {repo_url} into ./{repo_name}...")
-                subprocess.run(["git", "clone", "--depth", "1", repo_url, str(target_dir)], check=True)
+                # '--' terminates git option processing; repo_url cannot be mistaken for a flag
+                subprocess.run(["git", "clone", "--depth", "1", "--", repo_url, str(target_dir)], check=True)
                 print(f"✅ [XTRA PLUGINS] Cloned ./{repo_name} successfully.")
             elif not is_valid_repo:
                 # Directory exists but is empty or broken from a previous failed clone
@@ -290,7 +303,7 @@ def sync_xtra_plugins_repos() -> bool:
                 subprocess.run(
                     ["git", "-C", str(target_dir), "remote", "remove", "origin"], capture_output=True, check=False
                 )
-                subprocess.run(["git", "-C", str(target_dir), "remote", "add", "origin", repo_url], check=True)
+                subprocess.run(["git", "-C", str(target_dir), "remote", "add", "origin", "--", repo_url], check=True)
                 subprocess.run(["git", "-C", str(target_dir), "fetch", "--depth", "1", "origin"], check=True)
                 subprocess.run(["git", "-C", str(target_dir), "reset", "--hard", "FETCH_HEAD"], check=True)
                 print(f"✅ [XTRA PLUGINS] Repaired and synced ./{repo_name} successfully.")

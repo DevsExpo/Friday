@@ -13,6 +13,8 @@ from Main import Friday
 from Main.core.types.client import FridayTelegramClient as Client
 from Main.core.types.message import Message
 from Main.utils.essentials import Essentials
+from Main.utils.inline_helper import send_inline_widget
+from Main.plugins.bot.alive import _make_alive_content
 
 
 @Friday.register_on_cmd(
@@ -40,15 +42,11 @@ async def alive(c: Client, m: Message):
         and getattr(c.myself, "id", None) == Friday.bot_info.id
     )
     if is_bot:
-        from Main.plugins.bot.alive import _make_alive_content
-
         text, buttons = _make_alive_content()
         return await m.reply(text, buttons=buttons, parse_mode="html")
 
     if "-basic" not in m.user_args and "-text" not in m.user_args:
         try:
-            from Main.utils.inline_helper import send_inline_widget
-
             if await send_inline_widget(c, m, "alive"):
                 return
         except Exception:

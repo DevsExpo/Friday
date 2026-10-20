@@ -11,9 +11,13 @@ A-Z for sudo users!
 """
 
 from Main import Friday
+import re
 from style import bullets
 from Main.core.types.client import FridayTelegramClient as Client
 from Main.core.types.message import Message
+from Main.utils.ui_tokens import STATUS, ADMIN
+from Main.utils.inline_helper import send_inline_widget
+from Main.plugins.bot.sudo_inline import _render_sudo_menu
 
 
 b4 = bullets.get("bullet4", "•")
@@ -53,6 +57,7 @@ def bulletify(u_):
         ],
     },
     requires_input=True,
+    owner_only=True,
 )
 async def disabled_ps_func(c: Client, m: Message):
     msg = await m.handle_message("PROCESSING")
@@ -72,6 +77,7 @@ async def disabled_ps_func(c: Client, m: Message):
     "rmdfs",
     cmd_help={"help": "Disabled cmds from sudo users", "example": "rmdfs eval"},
     requires_input=True,
+    owner_only=True
 )
 async def remove_disabled_ps_func(c: Client, m: Message):
     msg = await m.handle_message("PROCESSING")
@@ -95,6 +101,7 @@ async def remove_disabled_ps_func(c: Client, m: Message):
             "addsudo 123456789",
         ],
     },
+    owner_only=True
 )
 async def add_sudo_func(c: Client, m: Message):
     msg = await m.handle_message("PROCESSING")
@@ -138,6 +145,7 @@ async def add_sudo_func(c: Client, m: Message):
             },
         ],
     },
+    owner_only=True
 )
 async def rm_sudo_func(c: Client, m: Message):
     msg = await m.handle_message("PROCESSING")
@@ -193,21 +201,18 @@ async def rm_sudo_func(c: Client, m: Message):
             }
         ],
     },
+    owner_only=True
 )
 async def list_sudo_func(c: Client, m: Message):
     is_bot = (getattr(c, "myself", None) and getattr(c.myself, "bot", False)) or (
         getattr(Friday, "bot_info", None) and getattr(c, "myself", None) and c.myself.id == Friday.bot_info.id
     )
     if is_bot:
-        from Main.plugins.bot.sudo_inline import _render_sudo_menu
-
         text, buttons = await _render_sudo_menu(c)
         return await m.reply(text, buttons=buttons, parse_mode="html")
 
     if "-basic" not in m.user_args and "-text" not in m.user_args:
         try:
-            from Main.utils.inline_helper import send_inline_widget
-
             if await send_inline_widget(c, m, "listsudo"):
                 return
         except Exception:
@@ -227,3 +232,134 @@ async def list_sudo_func(c: Client, m: Message):
         return await msg.edit_msg("NO_SUDO_LIST")
 
     await msg.edit_msg(bulletify(user_))
+ 
+ 
+@Friday.register_on_cmd(
+    ["sudomgr", "sudomanager"],
+    cmd_help={
+        "help": "Manage sudo plugin access permissions (grant all plugins or restrict to selected plugins).",
+        "example": [
+            "sudomgr",
+            "sudomgr all",
+            "sudomgr all -confirm",
+            "sudomgr ping, whois, help",
+            "sudomgr ping, whois, help -confirm",
+        ],
+        "user_args": [
+            {
+                "arg": "confirm",
+                "help": "Confirm the permission change after security warning.",
+                "requires_input": False,
+            },
+            {
+                "arg": "y",
+                "help": "Short alias for -confirm.",
+                "requires_input": False,
+            },
+        ],
+    },
+    owner_only=True,
+)
+async def sudomgr_func(c: Client, m: Message):
+    msg = await m.handle_message("PROCESSING")
+    prefix = getattr(Friday, "user_command_handler", ".") or "."
+    user_args = m.user_args
+    is_confirmed = bool(
+        user_args
+        and (
+            "confirm" in user_args
+            or "y" in user_args
+            or "f" in user_args
+            or "force" in user_args
+        )
+    )
+
+    raw_input = (m.user_input or "").strip()
+    all_plugins = sorted(list({k.lower() for k in Friday.cmd_list.keys()}))
+
+    if not raw_input or raw_input.lower() in ("status", "info"):
+        sudo_users = await Friday.config.get_sudo() or []
+        disabled = getattr(Friday, "disabled_sudo_plugin_list", []) or []
+        mode_text = (
+            f"{STATUS.SUCCESS} <b>All Plugins Allowed</b>"
+            if not disabled
+            else f"{STATUS.WARNING} <b>Restricted</b> ({len(disabled)} plugins blocked)"
+        )
+        disabled_str = (
+            ", ".join(f"<code>{p}</code>" for p in sorted(disabled[:20]))
+            if disabled
+            else "<i>None (All accessible)</i>"
+        )
+        if len(disabled) > 20:
+            disabled_str += f" <i>...and {len(disabled) - 20} more</i>"
+
+        text = (
+            f"{ADMIN.OWNER} <b>Sudo Permissions Manager</b>\n\n"
+            f"• <b>Sudo Users:</b> <code>{len(sudo_users)}</code> authorized\n"
+            f"• <b>Access Mode:</b> {mode_text}\n"
+            f"• <b>Disabled Plugins:</b> {disabled_str}\n\n"
+            "<b>Usage Commands:</b>\n"
+            f"• <code>{prefix}sudomgr all</code> - Grant access to all plugins (requires confirmation)\n"
+            f"• <code>{prefix}sudomgr &lt;p1, p2...&gt;</code> - Restrict sudo to selected plugins only\n"
+            f"• <code>{prefix}dpfs &lt;plugin&gt;</code> - Block a specific plugin from sudo\n"
+            f"• <code>{prefix}rmdfs &lt;plugin&gt;</code> - Unblock a specific plugin for sudo\n\n"
+            f"<i>{STATUS.SHIELD} Owner-only commands always remain strictly protected.</i>"
+        )
+        return await msg.edit_msg(text)
+
+    # 2. Grant ALL plugins
+    if raw_input.lower() in ("all", "--all", "-all"):
+        if not is_confirmed:
+            return await msg.edit_msg(
+                f"{STATUS.WARNING} <b>CRITICAL SECURITY WARNING: Grant All Plugins to Sudo</b>\n\n"
+                "You are about to grant sudo users access to <b>ALL PLUGINS</b> on this userbot.\n"
+                "This allows sudo users to execute every non-owner command (moderation, cleanup, tools, etc.).\n\n"
+                f"<i>({STATUS.SHIELD} Commands marked <code>owner_only</code> will always remain strictly blocked from sudo).</i>\n\n"
+                "Are you <b>100% sure</b> you want to proceed?\n"
+                "To confirm, re-run with:\n"
+                f"<code>{prefix}sudomgr all -confirm</code> (or <code>-y</code>)"
+            )
+
+        await Friday.config.sync_env_to_db("DISABLED_SUDO_CMD_LIST", [], upsert=True)
+        Friday.disabled_sudo_plugin_list = []
+        Friday.prepare_help()
+        return await msg.edit_msg(
+            f"{STATUS.SHIELD} <b>Sudo Permissions Configured:</b>\n"
+            f"{STATUS.SUCCESS} Granted sudo users access to <b>ALL PLUGINS</b>!\n\n"
+            f"<i>{STATUS.LOCK} All owner_only commands remain strictly restricted to you.</i>"
+        )
+    raw = raw_input.lower()
+    if raw.startswith("select "):
+        raw = raw[7:]
+    selected_tokens = [x.strip().lower() for x in re.split(r"[\s,]+", raw) if x.strip()]
+    valid_selected = [p for p in selected_tokens if p in all_plugins or any(k in p for k in all_plugins)]
+    if not valid_selected:
+        available_preview = ", ".join(f"<code>{p}</code>" for p in all_plugins[:15])
+        return await msg.edit_msg(
+            f"{STATUS.ERROR} <b>Invalid Plugin Selection:</b> None of the specified names matched loaded plugins.\n\n"
+            f"<b>Available plugins:</b> {available_preview}..."
+        )
+
+    if not is_confirmed:
+        blocked_count = max(0, len(all_plugins) - len(valid_selected))
+        return await msg.edit_msg(
+            f"{STATUS.WARNING} <b>CONFIRMATION: Restrict Sudo to Selected Plugins</b>\n\n"
+            f"You are configuring sudo access for <b>{len(valid_selected)} plugins</b>:\n"
+            f"• <b>Allowed:</b> <code>{', '.join(valid_selected)}</code>\n"
+            f"• <b>Blocked:</b> <code>{blocked_count}</code> other loaded plugins will be disabled for sudo users.\n\n"
+            "Are you <b>100% sure</b>?\n"
+            "To confirm, re-run with:\n"
+            f"<code>{prefix}sudomgr {', '.join(valid_selected)} -confirm</code> (or <code>-y</code>)"
+        )
+
+    blocked_plugins = [p for p in all_plugins if p not in valid_selected]
+    await Friday.config.sync_env_to_db("DISABLED_SUDO_CMD_LIST", blocked_plugins, upsert=True)
+    Friday.disabled_sudo_plugin_list = blocked_plugins
+    Friday.prepare_help()
+
+    return await msg.edit_msg(
+        f"{STATUS.SHIELD} <b>Sudo Permissions Configured:</b>\n"
+        f"{STATUS.SUCCESS} Sudo access restricted to <b>{len(valid_selected)} selected plugins</b>:\n"
+        f"<code>{', '.join(valid_selected)}</code>\n\n"
+        f"{STATUS.FORBIDDEN} <b>Restricted:</b> <code>{len(blocked_plugins)}</code> other plugins are now blocked for sudo users."
+    )

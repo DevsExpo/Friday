@@ -6,8 +6,8 @@
 #
 # All rights reserved.
 
-from os.path import isdir, exists, isfile
-from os import stat, rmdir, remove as rm, listdir as ls
+from os.path import isdir, isfile
+from os import stat, listdir as ls
 
 from Main import Friday
 from Main.core.types import FridayTelegramClient as Client
@@ -23,7 +23,7 @@ except ImportError:
 from pathlib import Path
 
 # Set this to your actual project root
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 def get_safe_path(user_input: str = "") -> Path | None:
@@ -54,6 +54,7 @@ def readable(data):
         "help": "Lists given directory given as input.",
         "example": "ls Main/plugins/userbot",
     },
+    owner_only=True
 )
 async def listdir_cmd_handler(c: Client, m: Message):
     msg = await m.handle_message("PROCESSING")
@@ -116,6 +117,7 @@ async def listdir_cmd_handler(c: Client, m: Message):
         ],
     },
     requires_input=True,
+    owner_only=True
 )
 async def remove_cmd_handler(c: Client, m: Message):
     msg = await m.handle_message("PROCESSING")

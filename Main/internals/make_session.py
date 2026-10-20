@@ -8,6 +8,7 @@
 
 import re
 import os
+import time
 import asyncio
 import logging
 from typing import Dict, Any, Optional
@@ -25,26 +26,110 @@ logger = logging.getLogger("friday.make_session")
 _ACTIVE_LOGINS: Dict[int, Dict[str, Any]] = {}
 _PENDING_LOGINS: set = set()
 
-# First-Claim Ownership Lock
+# Console Setup Code Lock for TWP
 _TWP_LOCKED_USER: Optional[int] = None
+_TWP_SETUP_CODE: Optional[str] = None
+
+# Rate-limiting for TWP PIN guesses {sender_id: {attempts, lockout_until}}
+_TWP_ATTEMPTS: Dict[int, Dict[str, Any]] = {}
+_TWP_GLOBAL_HOURLY: Dict[str, Any] = {"count": 0, "reset_at": 0.0}
+
+_MAX_ATTEMPTS_PER_SENDER = 5
+_LOCKOUT_SECONDS = 900   # 15 min
+_GLOBAL_HOURLY_CAP = 60  # total across all senders / hour
+
+
+def get_or_create_twp_code() -> str:
+    """Generate and display a secure 6-digit setup code in console logs."""
+    global _TWP_SETUP_CODE
+    if _TWP_SETUP_CODE is None:
+        import secrets
+
+        _TWP_SETUP_CODE = f"{secrets.randbelow(900000) + 100000:06d}"
+        msg = (
+            "\n" + "=" * 62 + "\n"
+            f"🔒 FRIDAY INITIAL SETUP PIN: [ {_TWP_SETUP_CODE} ]\n"
+            "Send this 6-digit code to your Telegram bot to unlock setup!\n"
+            + "=" * 62
+        )
+        logger.warning(msg)
+        print(msg, flush=True)
+    return _TWP_SETUP_CODE
+
+
+def _twp_is_rate_limited(sender_id: int) -> bool:
+    """Return True if this sender is locked out or the global cap is exceeded."""
+    now = time.monotonic()
+
+    # Global hourly cap
+    g = _TWP_GLOBAL_HOURLY
+    if now > g["reset_at"]:
+        g["count"] = 0
+        g["reset_at"] = now + 3600
+    if g["count"] >= _GLOBAL_HOURLY_CAP:
+        return True
+
+    # Per-sender lockout
+    rec = _TWP_ATTEMPTS.get(sender_id)
+    if rec and now < rec.get("lockout_until", 0):
+        return True
+    return False
+
+
+def _twp_record_fail(sender_id: int) -> None:
+    """Record a failed attempt and apply lockout if threshold crossed."""
+    now = time.monotonic()
+
+    _TWP_GLOBAL_HOURLY["count"] = _TWP_GLOBAL_HOURLY.get("count", 0) + 1
+
+    rec = _TWP_ATTEMPTS.setdefault(sender_id, {"attempts": 0, "lockout_until": 0.0})
+    rec["attempts"] = rec.get("attempts", 0) + 1
+    if rec["attempts"] >= _MAX_ATTEMPTS_PER_SENDER:
+        rec["lockout_until"] = now + _LOCKOUT_SECONDS
+        logger.warning(f"TWP: sender {sender_id} locked out after {rec['attempts']} failed attempts.")
+
+
+async def verify_twp_code(sender_id: Optional[int], code: str) -> bool:
+    """Validate submitted code against generated PIN and claim ownership."""
+    global _TWP_LOCKED_USER
+    if not sender_id or not code:
+        return False
+    current_code = get_or_create_twp_code()
+    clean_code = str(code).strip()
+    if clean_code == current_code:
+        _TWP_LOCKED_USER = int(sender_id)
+        if getattr(Friday, "config", None):
+            with suppress_error(msg="Setting OWNER_ID in config"):
+                Friday.config.OWNER_ID = int(sender_id)
+            with suppress_error(msg="Persisting OWNER_ID to DB"):
+                await Friday.config.add_env_to_db("OWNER_ID", int(sender_id), upsert=True)
+        logger.info(f"TWP Ownership successfully claimed by user ID: {sender_id}")
+        return True
+    _twp_record_fail(int(sender_id))
+    return False
+
+
+def is_twp_unclaimed() -> bool:
+    """Check if initial setup ownership has not been claimed yet."""
+    owner_id = getattr(Friday.config, "OWNER_ID", None)
+    if owner_id and str(owner_id).strip().isdigit() and int(owner_id) > 0:
+        return False
+    return _TWP_LOCKED_USER is None
 
 
 def is_twp_authorized(sender_id: Optional[int]) -> bool:
     """
     Security Barrier for Training Wheels Protocol (TWP):
     1. If OWNER_ID is configured in environment, strictly enforce sender_id == OWNER_ID.
-    2. If OWNER_ID is not configured, the first user to run setup locks ownership to prevent hijacking.
+    2. If OWNER_ID is not configured, only the user who verified the setup code is authorized.
     """
     global _TWP_LOCKED_USER
     if not sender_id:
         return False
     owner_id = getattr(Friday.config, "OWNER_ID", None)
     if owner_id and str(owner_id).strip().isdigit() and int(owner_id) > 0:
-        return sender_id == int(owner_id)
-    if _TWP_LOCKED_USER is None:
-        _TWP_LOCKED_USER = sender_id
-        return True
-    return sender_id == _TWP_LOCKED_USER
+        return int(sender_id) == int(owner_id)
+    return _TWP_LOCKED_USER is not None and int(sender_id) == _TWP_LOCKED_USER
 
 
 async def client_session(api_id: int, api_hash: str) -> FridayTelegramClient:
@@ -314,6 +399,29 @@ async def on_twp_text_input(client, message):
     chat_id = message.chat_id
     state = _ACTIVE_LOGINS.get(chat_id)
     if not state:
+        if Friday.training_wheels_protocol and is_twp_unclaimed():
+            sender_id = getattr(message, "sender_id", None)
+            if sender_id is None and hasattr(message, "from_user") and message.from_user:
+                sender_id = getattr(message.from_user, "id", None)
+            raw = (message.raw_text or "").strip()
+            # Only treat as PIN attempt if exactly 6 digits and sender is not rate-limited
+            if raw and not raw.startswith("/") and len(raw) == 6 and raw.isdigit() and sender_id:
+                if _twp_is_rate_limited(int(sender_id)):
+                    # Silent drop — do not reveal lockout to prevent enumeration
+                    return
+                if await verify_twp_code(sender_id, raw):
+                    await message.reply(
+                        f"✅ <b>Setup Code Verified!</b>\n\n"
+                        f"Welcome owner (<code>{sender_id}</code>)! Ownership has been locked to your account.\n"
+                        "Let's configure your Friday instance.",
+                        parse_mode="html",
+                    )
+                    from Main.internals.get_session import get_twp_step1_text, get_twp_step1_buttons
+
+                    return await message.reply(
+                        get_twp_step1_text(), buttons=get_twp_step1_buttons(), parse_mode="html"
+                    )
+                # Failed — silently drop (no oracle signal, rate limit already recorded in verify)
         return
 
     raw = (message.raw_text or "").strip()

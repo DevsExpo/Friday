@@ -438,14 +438,23 @@ async def test_devtools_security_owner_enforcement():
     stranger_msg.handle_message = AsyncMock(return_value=stranger_msg)
     stranger_msg.edit_msg = AsyncMock(return_value=stranger_msg)
 
-    # evaluate_command_handler calls m.handle_message() for non-owner security rejection
+    # evaluate_command_handler: gets processing msg via handle_message, then calls
+    # m_.edit_msg("Security Violation...") — since handle_message returns stranger_msg,
+    # edit_msg IS stranger_msg.edit_msg.
     await devtools_mod.evaluate_command_handler(mock_client, stranger_msg)
-    assert "Security Violation" in stranger_msg.handle_message.call_args[0][0]
+    assert stranger_msg.edit_msg.called, "Security rejection edit_msg was not called"
+    assert "Security Violation" in stranger_msg.edit_msg.call_args[0][0]
 
+    # terminal: owner_only gate is at the router level.
+    # Test the handler's own missing-input bail-out via PropertyMock on raw_user_input.
+    from unittest.mock import patch, PropertyMock
     stranger_msg.handle_message.reset_mock()
-    stranger_msg.text = ".terminal whoami"
-    await devtools_mod.terminal(mock_client, stranger_msg)
-    assert "Security Violation" in stranger_msg.handle_message.call_args[0][0]
+    stranger_msg.edit_msg.reset_mock()
+    stranger_msg.text = ".terminal"
+    with patch.object(type(stranger_msg), "raw_user_input", new_callable=PropertyMock, return_value=""):
+        await devtools_mod.terminal(mock_client, stranger_msg)
+    assert stranger_msg.handle_message.called, "terminal did not call handle_message for missing input"
+    assert "TERM_INPUT_REQUIRED" in stranger_msg.handle_message.call_args[0][0]
 
 
 @pytest.mark.asyncio

@@ -11,21 +11,9 @@ from traceback import format_exc
 from Main import Friday
 from Main.core.types.message import Message
 from Main.utils.ui_tokens import ADMIN, INDICATOR, STATUS
+from Main.utils.inline_helper import send_inline_widget
 
 packages_list = Friday.db.make_collection("packages") if Friday.db else None
-
-
-def verify_owner(m: Message) -> bool:
-    sender_id = getattr(m, "sender_id", None)
-    if sender_id is None and hasattr(m, "from_user") and m.from_user:
-        sender_id = getattr(m.from_user, "id", None)
-    from Main.utils.inline_helper import is_owner
-
-    if is_owner(sender_id):
-        return True
-    if getattr(m, "is_self", False):
-        return True
-    return False
 
 
 @Friday.register_on_cmd(
@@ -37,15 +25,10 @@ def verify_owner(m: Message) -> bool:
             "fpmpanel",
         ],
     },
+    owner_only=True
 )
 async def fpm_hub_cmd(c, m: Message):
-    if not verify_owner(m):
-        return await m.handle_message(
-            f"{STATUS.DENIED} <b>Access Denied:</b> Only the Friday owner can use the Package Manager."
-        )
     if not m.user_input:
-        from Main.utils.inline_helper import send_inline_widget
-
         sent = await send_inline_widget(c, m, "fpm")
         if sent:
             return
@@ -76,16 +59,11 @@ async def fpm_hub_cmd(c, m: Message):
         ],
     },
     requires_input=True,
+    owner_only=True
 )
 async def install_pack(c, m: Message):
-    if not verify_owner(m):
-        return await m.handle_message(
-            f"{STATUS.DENIED} <b>Access Denied:</b> Only the Friday owner can install external packages."
-        )
     msg = await m.handle_message("PROCESSING")
     raw = m.user_input.strip()
-
-    # Parse subcategory flag: -sub cat1,cat2
     subcategories = None
     if "-sub " in raw:
         parts = raw.split("-sub ")
@@ -193,6 +171,7 @@ async def list_packages(c, m: Message):
         ],
     },
     requires_input=True,
+    owner_only=True,
 )
 async def list_plugin_subcategories(c, m: Message):
     if not Friday.plugin_manager:
@@ -238,12 +217,9 @@ async def list_plugin_subcategories(c, m: Message):
         ],
     },
     requires_input=True,
+    owner_only=True
 )
 async def enable_subcategory_cmd(c, m: Message):
-    if not verify_owner(m):
-        return await m.handle_message(
-            f"{STATUS.DENIED} <b>Access Denied:</b> Only the Friday owner can modify plugin subcategories."
-        )
     if not Friday.plugin_manager:
         return await m.handle_message(f"{STATUS.ERROR} Plugin Manager not initialized.")
 
@@ -273,15 +249,11 @@ async def enable_subcategory_cmd(c, m: Message):
         ],
     },
     requires_input=True,
+    owner_only=True
 )
 async def disable_subcategory_cmd(c, m: Message):
-    if not verify_owner(m):
-        return await m.handle_message(
-            f"{STATUS.DENIED} <b>Access Denied:</b> Only the Friday owner can modify plugin subcategories."
-        )
     if not Friday.plugin_manager:
         return await m.handle_message(f"{STATUS.ERROR} Plugin Manager not initialized.")
-
     tokens = m.user_input.strip().split()
     if len(tokens) < 2:
         return await m.handle_message(
@@ -304,6 +276,7 @@ async def disable_subcategory_cmd(c, m: Message):
         "help": "Diagnose the health of all installed plugins, verify Python imports, and detect missing packages.",
         "example": "fpm_doctor",
     },
+    owner_only=True,
 )
 async def doctor_cmd(c, m: Message):
     if not Friday.plugin_manager:
@@ -345,12 +318,9 @@ async def doctor_cmd(c, m: Message):
         "help": "Batch-install any missing dependencies across all installed plugins without restarting the bot.",
         "example": "fpm_repair",
     },
+    owner_only=True
 )
 async def repair_cmd(c, m: Message):
-    if not verify_owner(m):
-        return await m.handle_message(
-            f"{STATUS.DENIED} <b>Access Denied:</b> Only the Friday owner can run FPM repair."
-        )
     if not Friday.plugin_manager:
         return await m.handle_message(f"{STATUS.ERROR} Plugin Manager not initialized.")
 
@@ -379,12 +349,9 @@ async def repair_cmd(c, m: Message):
         "help": "Uninstall an external plugin and remove all files.",
     },
     requires_input=True,
+    owner_only=True
 )
 async def uninstall_pack(c, m: Message):
-    if not verify_owner(m):
-        return await m.handle_message(
-            f"{STATUS.DENIED} <b>Access Denied:</b> Only the Friday owner can uninstall external plugins."
-        )
     msg = await m.handle_message("PROCESSING")
     pn = m.user_input.strip()
 
@@ -409,12 +376,9 @@ async def uninstall_pack(c, m: Message):
         "help": "Update an installed plugin to its latest version.",
     },
     requires_input=True,
+    owner_only=True
 )
 async def update_pack(c, m: Message):
-    if not verify_owner(m):
-        return await m.handle_message(
-            f"{STATUS.DENIED} <b>Access Denied:</b> Only the Friday owner can update external plugins."
-        )
     msg = await m.handle_message("PROCESSING")
     pn = m.user_input.strip()
 

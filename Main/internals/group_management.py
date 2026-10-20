@@ -13,7 +13,7 @@ from Main.utils.suppress import suppress_error
 from Main.core.types.client import FridayTelegramClient as Client
 from Main.core.decorators import check_perm
 from Main.core.types.message import Message
-from Main.plugins.userbot.channel_utils import digit_wrap
+from Main.core.config import digit_wrap
 from telethon import errors
 
 

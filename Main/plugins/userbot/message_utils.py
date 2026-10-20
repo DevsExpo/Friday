@@ -8,6 +8,7 @@
 
 import os
 import time
+import httpx
 import urllib.parse
 from typing import Optional, Tuple
 from cachetools import TTLCache
@@ -154,8 +155,6 @@ async def _async_translate(c: Client, text: str, dest: str, src: str = "auto") -
     if http_client:
         res = await http_client.get(url, headers={"User-Agent": "Mozilla/5.0"})
     else:
-        import httpx
-
         async with httpx.AsyncClient(timeout=15.0) as temp_client:
             res = await temp_client.get(url, headers={"User-Agent": "Mozilla/5.0"})
 

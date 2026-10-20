@@ -16,7 +16,6 @@ fallback so all handlers can share it without repeated try/except import blocks.
 import re
 import html
 import contextlib
-from typing import Dict, Any
 
 from telethon import custom, functions
 
@@ -24,119 +23,13 @@ from Main import Friday
 from Main.core.decorators import log_errors, iuser_check
 from Main.utils.custom_filters import filters
 from Main.utils.inline_helper import is_owner_cb, is_owner
-from Main.utils.ui_tokens import ADMIN, INDICATOR, NAV, STATUS
-
-
-# Imported once; falls back to an empty local dict if the PM_Security plugin
-# hasn't been loaded yet (e.g. when running in bot-only / TWP mode).
-try:
-    from Main.plugins.userbot.PM_Security import pm_permit_warning_cache  # type: ignore[import]
-except Exception:
-    pm_permit_warning_cache: Dict[int, Any] = {}  # type: ignore[assignment]
-
-
-async def _render_pmpermit_panel():
-    is_enabled = await Friday.config.get_pm_sts()
-    limit = await Friday.config.get_pm_warn_limit()
-    allow_contacts = await Friday.config.get_pm_allow_contacts()
-    custom_msg = await Friday.config.get_pm_custom_msg()
-    pending_count = len(pm_permit_warning_cache)
-
-    status_badge = (
-        f"{INDICATOR.GREEN} <b>ACTIVE &amp; SCREENING</b>" if is_enabled else f"{INDICATOR.RED} <b>DISABLED</b>"
-    )
-    contacts_badge = (
-        f"{STATUS.SUCCESS} <b>ALLOWED (Bypass)</b>" if allow_contacts else f"{STATUS.SHIELD} <b>SCREENED</b>"
-    )
-    msg_badge = f"{ADMIN.NOTE} <i>Customized</i>" if custom_msg else f"{ADMIN.DOC} <i>Default Template</i>"
-
-    text = (
-        f"{STATUS.SHIELD} <b>Friday PM Security Control Panel</b>\n\n"
-        f"• <b>Status:</b> {status_badge}\n"
-        f"• <b>Spam Warning Limit:</b> <code>{limit} Warnings</code> (Blocks on #{limit + 1})\n"
-        f"• <b>Allow Contacts:</b> {contacts_badge}\n"
-        f"• <b>Warning Message:</b> {msg_badge}\n"
-        f"• <b>Pending In Queue:</b> <code>{pending_count} user(s)</code>\n\n"
-        "<i>Tap buttons below to change policies, adjust limits (1-20), or mass approve:</i>"
-    )
-    buttons = [
-        [
-            custom.Button.inline(
-                f"{INDICATOR.RED} Turn OFF PM Permit" if is_enabled else f"{INDICATOR.GREEN} Turn ON PM Permit",
-                b"pmsec_toggle",
-            )
-        ],
-        [
-            custom.Button.inline(
-                f"{ADMIN.CONTACT} Contacts: ALLOWED" if allow_contacts else f"{ADMIN.CONTACT} Contacts: SCREENED",
-                b"pmsec_contacts",
-            ),
-            custom.Button.inline(f"{ADMIN.NUMBER} Set Limit ({limit})", b"pmsec_open_limits"),
-        ],
-        [
-            custom.Button.inline(f"{ADMIN.CHAT} View Message", b"pmsec_view_msg"),
-            custom.Button.inline(f"{STATUS.SUCCESS} Mass Approve ({pending_count})", b"pmsec_mass_appr"),
-        ],
-        [
-            custom.Button.inline(f"{STATUS.CLEAN} Reset Warnings", b"pmsec_reset"),
-            custom.Button.inline(f"{STATUS.GEAR} Settings Panel", b"panel_refresh"),
-        ],
-        [
-            custom.Button.inline(f"{NAV.HOME_ICON} Main Menu", b"bot_start_menu"),
-            custom.Button.inline(f"{NAV.CLOSE_ICON} Close", b"pmsec_close"),
-        ],
-    ]
-    return text, buttons
-
-
-async def _render_limits_panel():
-    limit = await Friday.config.get_pm_warn_limit()
-    text = (
-        f"{ADMIN.NUMBER} <b>Select PM Security Warning Limit</b>\n\n"
-        "Choose how many warning messages a user receives before being automatically blocked.\n\n"
-        f"• Current Active Limit: <b>{limit} Warnings</b>\n\n"
-        "<i>Tap any number (1 - 20) below to set the limit:</i>"
-    )
-    buttons = [
-        [
-            custom.Button.inline(
-                f"{STATUS.SUCCESS} {r * 5 + c}" if (r * 5 + c) == limit else str(r * 5 + c),
-                f"pmsec_set_limit_{r * 5 + c}".encode(),
-            )
-            for c in range(1, 6)
-        ]
-        for r in range(4)
-    ]
-    buttons.append(
-        [
-            custom.Button.inline(f"{NAV.BACK_ICON} Back to PM Security", b"pmsec_main_panel"),
-            custom.Button.inline(f"{NAV.HOME_ICON} Main Menu", b"bot_start_menu"),
-        ]
-    )
-    return text, buttons
-
-
-async def _render_msg_panel():
-    custom_msg = await Friday.config.get_pm_custom_msg()
-    status_text = (
-        f"<blockquote>{html.escape(custom_msg)}</blockquote>"
-        if custom_msg
-        else "<i>(Currently using default template)</i>"
-    )
-    text = (
-        f"{ADMIN.CHAT} <b>PM Security Warning Message</b>\n\n"
-        f"<b>Current Active Message:</b>\n{status_text}\n\n"
-        "<i>To change your message, send:</i>\n"
-        f"<code>{Friday.user_command_handler}setpmmsg &lt;your custom message&gt;</code>"
-    )
-    buttons = [
-        [custom.Button.inline(f"{ADMIN.RELOAD} Reset to Default Template", b"pmsec_reset_msg")],
-        [
-            custom.Button.inline(f"{NAV.BACK_ICON} Back to PM Security", b"pmsec_main_panel"),
-            custom.Button.inline(f"{NAV.HOME_ICON} Main Menu", b"bot_start_menu"),
-        ],
-    ]
-    return text, buttons
+from Main.utils.ui_tokens import ADMIN, STATUS
+from Main.utils.pm_panel import (
+    pm_permit_warning_cache,
+    render_limits_panel,
+    render_msg_panel,
+    render_pmpermit_panel,
+)
 
 
 async def _safe_edit(cq, text: str, buttons: list) -> None:
@@ -152,7 +45,7 @@ async def pmpermit_inline_query_handler(c, iq):
         return await iq.answer(
             [], switch_pm=f"{STATUS.DENIED} Access denied: PM Security is owner only.", switch_pm_param="auth"
         )
-    text, buttons = await _render_pmpermit_panel()
+    text, buttons = await render_pmpermit_panel()
     res = iq.builder.article(
         title=f"{STATUS.SHIELD} PM Security Panel",
         description="Toggle PM security, set limits (1-20), custom message, and mass approve.",
@@ -175,24 +68,24 @@ async def pmsec_callback_handler(c, cb):
 
     # Navigation
     if data == "pmsec_main_panel":
-        return await _safe_edit(cb, *(await _render_pmpermit_panel()))
+        return await _safe_edit(cb, *(await render_pmpermit_panel()))
 
     if data == "pmsec_open_limits":
-        return await _safe_edit(cb, *(await _render_limits_panel()))
+        return await _safe_edit(cb, *(await render_limits_panel()))
 
     if data.startswith("pmsec_set_limit_"):
         new_limit = int(data.rsplit("_", 1)[-1])
         await Friday.config.sync_env_to_db("PM_PERMIT_LIMIT", new_limit)
         await cb.answer(f"{ADMIN.NUMBER} PM Warning limit set to {new_limit} warnings!")
-        return await _safe_edit(cb, *(await _render_limits_panel()))
+        return await _safe_edit(cb, *(await render_limits_panel()))
 
     if data == "pmsec_view_msg":
-        return await _safe_edit(cb, *(await _render_msg_panel()))
+        return await _safe_edit(cb, *(await render_msg_panel()))
 
     if data == "pmsec_reset_msg":
         await Friday.config.del_env_from_db("PM_PERMIT_CUSTOM_MSG")
         await cb.answer(f"{ADMIN.RELOAD} Custom warning message reset to default!", alert=True)
-        return await _safe_edit(cb, *(await _render_msg_panel()))
+        return await _safe_edit(cb, *(await render_msg_panel()))
 
     # Toggle / contacts
     if data == "pmsec_toggle":
@@ -230,7 +123,7 @@ async def pmsec_callback_handler(c, cb):
         return
 
     # Refresh panel after any state change
-    await _safe_edit(cb, *(await _render_pmpermit_panel()))
+    await _safe_edit(cb, *(await render_pmpermit_panel()))
 
 
 @Friday.bot.on_inline_query(filters.regex(r"^pm_warn:(\d+)(?::(\d+):(\d+))?"))

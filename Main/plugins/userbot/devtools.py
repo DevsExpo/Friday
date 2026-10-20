@@ -19,16 +19,6 @@ from Main.utils.ui_tokens import STATUS
 from Main.utils.inline_helper import is_owner
 
 
-def verify_owner(m: Message) -> bool:
-    sender_id = getattr(m, "sender_id", None)
-    if sender_id is None and hasattr(m, "from_user") and m.from_user:
-        sender_id = getattr(m.from_user, "id", None)
-    if is_owner(sender_id):
-        return True
-    if getattr(m, "is_self", False):
-        return True
-    return False
-
 
 @Friday.register_on_cmd(
     ["json"],
@@ -94,20 +84,13 @@ async def get_json_message_handler(c: Client, m: Message):
         ],
     },
     just_exc=True,
+    owner_only=True
 )
 async def evaluate_command_handler(c: Client, m: Message):
-    if not verify_owner(m):
-            return await m.handle_message(
-            Friday.get_string("DEVTOOLS_SECURITY_VIOLATION_EXEC") or "Security Violation: Only the userbot owner can execute py code."
-        )
     msg_id = m.id
     m_ = await m.handle_message("PROCESSING")
-    is_owner = (
-        m.out
-        or (getattr(m, "from_user", None) and getattr(m.from_user, "is_self", False))
-        or (m.sender_id and m.sender_id == getattr(c.myself, "id", None))
-    )
-    if not is_owner:
+    # Accept: message sent by self (userbot) OR verified owner (works on bot client too)
+    if not (getattr(m, "out", False) or is_owner(getattr(m, "sender_id", None))):
         return await m_.edit_msg(
             Friday.get_string("DEVTOOLS_SECURITY_VIOLATION_EVAL") or "Security Violation: Only the userbot owner can evaluate code."
         )
@@ -172,12 +155,9 @@ async def evaluate_command_handler(c: Client, m: Message):
             },
         ],
     },
+    owner_only=True
 )
 async def terminal(c: Client, m: Message):
-    if not verify_owner(m):
-            return await m.handle_message(
-            Friday.get_string("DEVTOOLS_SECURITY_VIOLATION_TERM") or "Security Violation: Only the userbot owner can execute terminal commands."
-        )
     user_args = m.user_args
     bash_code = m.raw_user_input
     if not bash_code:
@@ -243,6 +223,7 @@ async def paste_logs(log_path: str) -> str:
             {"arg": "r", "help": "Resets logs.", "requires_input": False},
         ],
     },
+    owner_only=True
 )
 async def logs(c: Client, m: Message):
     log_file_ = "friday.log"

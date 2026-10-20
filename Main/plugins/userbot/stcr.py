@@ -11,6 +11,7 @@ import time
 import math
 import shutil
 import asyncio
+import subprocess
 from PIL import Image
 from Main import Friday
 from typing import Tuple
@@ -30,7 +31,6 @@ def convertor_(input_file: str, w: int, h: int) -> str:
     """Convert raw video to webm sticker using ffmpeg if installed."""
     if not shutil.which("ffmpeg"):
         raise RuntimeError("FFmpeg is not installed on this system.")
-    import subprocess
 
     out_file = f"{os.path.splitext(input_file)[0]}.webm"
     cmd = [

@@ -6,6 +6,7 @@
 #
 # All rights reserved.
 
+import re
 import contextlib
 from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
@@ -81,5 +82,12 @@ class Updater:
         try:
             remote.push(refspec="HEAD:refs/heads/main", force=True)
         except Exception as error:
-            await msg.edit_msg("UPDATER_ERROR", string_args=(error))
+            # P6: Redact any embedded credentials (https://api:KEY@host) before
+            # forwarding the error to a Telegram message or log file.
+            safe_error = re.sub(
+                r"https://[^:]+:[^@]+@",
+                "https://api:[REDACTED]@",
+                str(error),
+            )
+            await msg.edit_msg("UPDATER_ERROR", string_args=(safe_error,))
             return repo.__del__()

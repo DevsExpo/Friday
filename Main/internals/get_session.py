@@ -17,10 +17,17 @@ from telethon import custom
 from Main import Friday
 from Main.utils.custom_filters import filters
 from Main.core.decorators import log_errors
-from Main.internals.make_session import persist_and_finalize_session, is_twp_authorized
+from Main.internals.make_session import (
+    persist_and_finalize_session,
+    is_twp_authorized,
+    is_twp_unclaimed,
+    get_or_create_twp_code,
+    verify_twp_code,
+    _twp_is_rate_limited,
+)
 from Main.internals.make_session import _PENDING_LOGINS
 from Main.utils.suppress import suppress_error
-from Main.plugins.bot.help import get_help_menu, help_text
+from Main.utils.help_menu import get_help_menu, help_text
 
 
 def _get_db_badge() -> str:
@@ -180,6 +187,22 @@ async def start_command_handler(c, m):
 
     payload = m.text.replace("/start", "").strip() if m.text else ""
 
+    if payload:
+        if Friday.training_wheels_protocol and is_twp_unclaimed():
+            if payload.isdigit() and len(payload) == 6 and sender_id:
+                if _twp_is_rate_limited(int(sender_id)):
+                    # Silent drop — do not reveal lockout state
+                    return
+                if await verify_twp_code(sender_id, payload):
+                    await m.reply(
+                        f"✅ <b>Setup Code Verified!</b>\n\n"
+                        f"Welcome owner (<code>{sender_id}</code>)! Ownership has been locked to your account.\n"
+                        "Let's configure your Friday instance.",
+                        parse_mode="html",
+                    )
+                    return await m.reply(get_twp_step1_text(), buttons=get_twp_step1_buttons(), parse_mode="html")
+                # Failed — silently drop (no oracle)
+
     if payload == "help" or payload.startswith("help"):
         if not sender_id or sender_id not in Friday.auth_users:
             return await m.reply("⚠️ <i>You are not authorized to use this bot.</i>", parse_mode="html")
@@ -201,6 +224,15 @@ async def start_command_handler(c, m):
         await m.reply_file(file, caption=caption, buttons=start_buttons or None, send_msg_if_file_invalid=True)
 
         if Friday.training_wheels_protocol:
+            if is_twp_unclaimed():
+                get_or_create_twp_code()
+                return await m.reply(
+                    "🔒 <b>Friday Initial Setup Locked</b>\n\n"
+                    "To claim ownership of this bot instance, please send the <b>6-digit setup PIN</b> displayed in your server console / deployment logs.\n\n"
+                    "💡 <i>Tip: Send the 6-digit PIN as a message here or use <code>/start &lt;code&gt;</code></i>",
+                    parse_mode="html",
+                )
+
             if not is_twp_authorized(sender_id):
                 return await m.reply(
                     "⛔ <b>Access Denied:</b> This bot's initial setup is locked to the verified owner.",
@@ -211,6 +243,11 @@ async def start_command_handler(c, m):
             await m.reply(get_twp_step1_text(), buttons=get_twp_step1_buttons(), parse_mode="html")
 
     elif payload == "add_session":
+        if is_twp_unclaimed():
+            return await m.reply(
+                "🔒 <b>Setup Locked:</b> Please enter the 6-digit setup code from your console logs first.",
+                parse_mode="html",
+            )
         if not is_twp_authorized(sender_id):
             return await m.reply("⛔ <b>Access Denied:</b> Initial setup is locked to the owner.", parse_mode="html")
         await m.reply(get_twp_step2_text(), buttons=get_twp_step2_buttons(), parse_mode="html")
@@ -220,6 +257,10 @@ async def start_command_handler(c, m):
 @log_errors
 async def add_session_menu_cb_handler(c, cb):
     if not is_twp_authorized(cb.sender_id):
+        if is_twp_unclaimed():
+            return await cb.answer(
+                "🔒 Setup is locked! Enter the 6-digit PIN from your console logs first.", alert=True
+            )
         return await cb.answer("⛔ Access Denied: Setup is locked to the owner.", alert=True)
     await cb.edit(get_twp_step1_text(), buttons=get_twp_step1_buttons(), parse_mode="html")
 
@@ -227,6 +268,10 @@ async def add_session_menu_cb_handler(c, cb):
 @Friday.bot.on_callback_query(filters.regex(r"^twp_step2_session"))
 async def twp_step2_session_handler(c, cq):
     if not is_twp_authorized(cq.sender_id):
+        if is_twp_unclaimed():
+            return await cq.answer(
+                "🔒 Setup is locked! Enter the 6-digit PIN from your console logs first.", alert=True
+            )
         return await cq.answer("⛔ Access Denied: Setup is locked to the owner.", alert=True)
     await cq.edit(get_twp_step2_text(), buttons=get_twp_step2_buttons(), parse_mode="html")
 
@@ -234,6 +279,10 @@ async def twp_step2_session_handler(c, cq):
 @Friday.bot.on_callback_query(filters.regex(r"^twp_db_menu"))
 async def twp_db_menu_handler(c, cq):
     if not is_twp_authorized(cq.sender_id):
+        if is_twp_unclaimed():
+            return await cq.answer(
+                "🔒 Setup is locked! Enter the 6-digit PIN from your console logs first.", alert=True
+            )
         return await cq.answer("⛔ Access Denied: Setup is locked to the owner.", alert=True)
     await cq.edit(get_twp_step1_text(), buttons=get_twp_step1_buttons(), parse_mode="html")
 
@@ -312,8 +361,6 @@ async def twp_set_db_handler(c, cq):
         name = "MongoDB Atlas URI (mongodb+srv://...)" if choice == "mongo" else "PostgreSQL URI (postgresql://...)"
         await cq.answer()
         if hasattr(Friday.bot, "_conversations"):
-            from Main.utils.suppress import suppress_error
-
             with suppress_error():
                 for c_obj in list(Friday.bot._conversations.get(cq.chat_id, set())):
                     c_obj._cancel_all()

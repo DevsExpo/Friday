@@ -18,6 +18,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, List, Optional, Tuple, Union
 
 from telethon import errors
+from telethon import types as _types
+from telethon.utils import get_peer_id
 from telethon.tl.patched import Message as TelethonMessage
 from telethon.tl.custom import Message as CustomMessage
 import Main
@@ -66,8 +68,6 @@ class ChatWrapper:
         self._entity = chat_entity
         cid = chat_id or getattr(chat_entity, "id", None)
         if not cid:
-            from telethon.utils import get_peer_id
-
             try:
                 cid = get_peer_id(chat_entity)
             except Exception:
@@ -304,8 +304,6 @@ class Message(TelethonMessage):
             self._sender_cached = UserWrapper(sender)
             return self._sender_cached
         if self.sender_id:
-            from telethon import types as _types
-
             dummy = _types.User(id=self.sender_id)
             self._sender_cached = UserWrapper(dummy)
             return self._sender_cached
@@ -431,8 +429,6 @@ class Message(TelethonMessage):
 
     async def handle_message(self, text: str, **kwargs) -> Any:
         """Edit message if sent by self/userbot, or reply if from sudo/bot."""
-        import Main
-
         friday = Main.Friday
         sudo_users = getattr(friday.config, "SUDO_USERS", [])
         is_bot = (
@@ -671,8 +667,6 @@ class Message(TelethonMessage):
                 return await self.delete()
 
     async def delete_if_sudo(self, **kwargs) -> Any:
-        import Main
-
         sudo = getattr(Main.Friday.config, "SUDO_USERS", [])
         if self.out or (self.from_user and self.from_user.is_self):
             return
@@ -735,8 +729,6 @@ class Message(TelethonMessage):
         text = caption if caption is not None else (self.text or self.message or "")
         client = getattr(self, "client", None)
         if not client:
-            import Main
-
             client = Main.Friday.clients[0] if Main.Friday.clients else None
         if not client:
             raise RuntimeError("No client available to copy message")

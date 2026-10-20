@@ -6,9 +6,11 @@
 #
 # All rights reserved.
 
+import asyncio
 import logging
 from contextlib import suppress
 from typing import Optional, Any
+from telethon import errors, types
 from Main import Friday
 
 logger = logging.getLogger("friday.inline")
@@ -47,6 +49,24 @@ async def send_inline_widget(c: Any, m: Any, query: str) -> bool:
             with suppress(Exception):
                 await m.delete_if_self()
             return True
+    except errors.BotInlineDisabledError:
+        try:
+            from Main.internals.set_inline import set_inline_in_botfather
+
+            logger.info(f"Inline mode disabled on @{bot_username}. Attempting auto-enable via @BotFather...")
+            await set_inline_in_botfather(c)
+            await asyncio.sleep(1)
+            results = await c.get_inline_bot_results(bot_username, query)
+            if results and isinstance(results, (list, tuple)) and len(results) > 0:
+                rm = getattr(m, "reply_to_message", None)
+                reply_to = rm.id if rm else m.id
+                await results[0].click(chat_id, reply_to=reply_to)
+                with suppress(Exception):
+                    await m.delete_if_self()
+                return True
+        except Exception as exc:
+            logger.warning(f"Auto-enabling inline on @BotFather failed: {exc}")
+            return False
     except Exception as e:
         logger.debug(f"Inline widget invocation for '{query}' failed: {e}")
         return False
@@ -55,20 +75,43 @@ async def send_inline_widget(c: Any, m: Any, query: str) -> bool:
 
 
 def is_owner(sender_id: Optional[int]) -> bool:
-    """Verify if the sender_id belongs to the primary owner or host userbot account."""
+    """Single source of truth: delegates to Friday._resolve_is_owner.
+
+    All callers (control panel, FPM inline, sudo inline, PM-security inline,
+    devtools) use this function so the definition stays in one place.
+    Friday._resolve_is_owner already suppresses TypeError/ValueError from a
+    non-numeric OWNER_ID string, so no extra guard is needed here.
+    """
     if not sender_id:
         return False
-    owner_id = getattr(Friday.config, "OWNER_ID", None)
-    if owner_id and sender_id == int(owner_id):
-        return True
-    for myself in getattr(Friday, "ourselves", []):
-        if getattr(myself, "id", None) == sender_id:
+    resolver = getattr(Friday, "_resolve_is_owner", None)
+    if callable(resolver):
+        return resolver(sender_id)
+    # Fallback during early startup before FridayClient is fully initialised
+    owner_id = getattr(getattr(Friday, "config", None), "OWNER_ID", None)
+    try:
+        if owner_id and int(sender_id) == int(owner_id):
             return True
-    for cl in getattr(Friday, "clients", []):
-        if hasattr(cl, "myself") and cl.myself and getattr(cl.myself, "id", None) == sender_id:
+    except (TypeError, ValueError):
+        pass
+    for acc in getattr(Friday, "ourselves", []) or []:
+        if getattr(acc, "id", None) == sender_id:
+            return True
+    for cl in getattr(Friday, "clients", []) or []:
+        if getattr(getattr(cl, "myself", None), "id", None) == sender_id:
             return True
     return False
 
+
+def is_sudo(sender_id: Optional[int]) -> bool:
+    """Verify if the sender_id belongs to the sudo (trusted user) tier."""
+    if not sender_id:
+        return False
+    sudo_users = getattr(Friday.config, "SUDO_USERS", []) or []
+    try:
+        return int(sender_id) in {int(u) for u in sudo_users}
+    except (TypeError, ValueError):
+        return sender_id in sudo_users
 
 def is_owner_cb(cq: Any) -> bool:
     """Verify that the clicking user is strictly the owner (not sudo or stranger)."""

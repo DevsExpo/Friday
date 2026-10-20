@@ -13,6 +13,7 @@ import re
 import dotenv
 import logging
 import pathlib
+import tempfile
 import contextlib
 from functools import wraps
 from typing import Any, List, Union, Optional
@@ -168,16 +169,20 @@ class BaseConfig:
         try:
             with open(env_path, "r", encoding="utf-8") as f:
                 raw_data = f.read()
-            with open(env_path, "w", encoding="utf-8") as f:
-                if re.search(r"SESSIONS=(?:[^\r\n\t\f\v]+)?", raw_data):
-                    new_data = re.sub(
-                        r"SESSIONS=(?:[^\r\n\t\f\v]+)?",
-                        f"SESSIONS={' '.join(self.SESSIONS)}",
-                        raw_data,
-                    )
-                else:
-                    new_data = f"{raw_data}\nSESSIONS={' '.join(self.SESSIONS)}"
-                f.write(new_data)
+            if re.search(r"SESSIONS=(?:[^\r\n\t\f\v]+)?", raw_data):
+                new_data = re.sub(
+                    r"SESSIONS=(?:[^\r\n\t\f\v]+)?",
+                    f"SESSIONS={' '.join(self.SESSIONS)}",
+                    raw_data,
+                )
+            else:
+                new_data = f"{raw_data}\nSESSIONS={' '.join(self.SESSIONS)}"
+            # P10: Write atomically — temp file in same dir then os.replace()
+            dir_ = env_path.parent
+            with tempfile.NamedTemporaryFile("w", dir=dir_, delete=False, encoding="utf-8", suffix=".env.tmp") as tf:
+                tf.write(new_data)
+                tmp_path = tf.name
+            os.replace(tmp_path, env_path)
             logger.info("Session removed from .env")
         except Exception as e:
             logger.warning("Failed to update .env: %s", e)
@@ -192,16 +197,20 @@ class BaseConfig:
             try:
                 with open(env_path, "r", encoding="utf-8") as f:
                     raw_data = f.read()
-                with open(env_path, "w", encoding="utf-8") as f:
-                    if re.search(r"SESSIONS=(?:[^\r\n\t\f\v]+)?", raw_data):
-                        new_data = re.sub(
-                            r"SESSIONS=(?:[^\r\n\t\f\v]+)?",
-                            f"SESSIONS={' '.join(self.SESSIONS)}",
-                            raw_data,
-                        )
-                    else:
-                        new_data = f"{raw_data}\nSESSIONS={' '.join(self.SESSIONS)}"
-                    f.write(new_data)
+                if re.search(r"SESSIONS=(?:[^\r\n\t\f\v]+)?", raw_data):
+                    new_data = re.sub(
+                        r"SESSIONS=(?:[^\r\n\t\f\v]+)?",
+                        f"SESSIONS={' '.join(self.SESSIONS)}",
+                        raw_data,
+                    )
+                else:
+                    new_data = f"{raw_data}\nSESSIONS={' '.join(self.SESSIONS)}"
+                # P10: Atomic write
+                dir_ = env_path.parent
+                with tempfile.NamedTemporaryFile("w", dir=dir_, delete=False, encoding="utf-8", suffix=".env.tmp") as tf:
+                    tf.write(new_data)
+                    tmp_path = tf.name
+                os.replace(tmp_path, env_path)
                 logger.info("New session successfully appended to .env")
             except Exception as e:
                 logger.warning("Failed to append session to .env: %s", e)

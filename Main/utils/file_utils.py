@@ -9,12 +9,8 @@
 import os
 import math
 import mimetypes
-from PIL import Image
-from tinytag import TinyTag
 from ._validators import is_url
 from .file_helpers import run_in_exc
-from hachoir.parser import createParser
-from hachoir.metadata import extractMetadata
 
 
 class FileHelpers:
@@ -26,6 +22,9 @@ class FileHelpers:
 
     @property
     def get_meta_data_video_hachoir(self):
+        from hachoir.parser import createParser
+        from hachoir.metadata import extractMetadata
+
         if metadata := extractMetadata(createParser(self.__file__)):
             dur = metadata.get("duration")
             width = metadata.get("width")
@@ -35,6 +34,8 @@ class FileHelpers:
 
     @run_in_exc
     def _get_metadata(self, is_audio=True):
+        from tinytag import TinyTag
+
         file = self.__file__
         attr = TinyTag.get(file)
         if is_audio:
@@ -49,6 +50,8 @@ class FileHelpers:
 
     @run_in_exc
     def _resize_if_req(self, image_size_allowded=1280):
+        from PIL import Image
+
         image = self.__file__
         im = Image.open(image)
         if (im.width and im.height) < image_size_allowded:
@@ -74,6 +77,9 @@ class FileHelpers:
 
     @property
     def get_using_hachoir(self):
+        from hachoir.parser import createParser
+        from hachoir.metadata import extractMetadata
+
         metadata = extractMetadata(createParser(self.__file__))
         if metadata and metadata.has("mime_type"):
             return metadata.get("mime_type")

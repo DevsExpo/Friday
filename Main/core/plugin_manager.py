@@ -21,6 +21,7 @@ Next-generation modular plugin manager supporting:
 from __future__ import annotations
 
 import sys
+import re
 import json
 import shutil
 import asyncio
@@ -205,14 +206,19 @@ class GithubProvider(PluginProvider):
         async with aiofiles.open(zip_path, "wb") as f:
             await f.write(resp.content)
 
-        # Extract safely
+        # Extract safely — both paths now check for zip-slip
         with zipfile.ZipFile(zip_path, "r") as z:
             top_level_dirs = {p.split("/")[0] for p in z.namelist() if "/" in p}
             if len(top_level_dirs) == 1:
                 prefix = list(top_level_dirs)[0] + "/"
                 for member in z.infolist():
                     if member.filename.startswith(prefix) and member.filename != prefix:
-                        target = dest / member.filename[len(prefix) :]
+                        # P3: Resolve and confirm target stays inside dest
+                        rel = member.filename[len(prefix):]
+                        target = (dest / rel).resolve()
+                        if not target.is_relative_to(dest.resolve()):
+                            logger.warning("Zip-slip attempt blocked: %s", member.filename)
+                            continue
                         if member.is_dir():
                             target.mkdir(parents=True, exist_ok=True)
                         else:
@@ -412,11 +418,21 @@ class PluginManager:
             logger.info(f"All {len(deps)} dependencies satisfied via existing environment.")
             return True, []
 
-        missing_str = ", ".join(missing)
-        logger.info(f"Installing missing dependencies via pip: {missing_str}")
+        # P12: Sanitise package names — reject tokens that look like pip flags or URLs
+        _TOKEN_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9._\-]*[A-Za-z0-9])?([><=!~^][^\s]*)?$")
+        safe_missing = [d for d in missing if _TOKEN_RE.match(d) and not d.startswith("-")]
+        rejected = set(missing) - set(safe_missing)
+        if rejected:
+            logger.warning("Dependency names rejected (unsafe tokens): %s", rejected)
+        if not safe_missing:
+            logger.warning("No safe dependencies remain to install after sanitisation.")
+            return False, missing
+
+        safe_str = ", ".join(safe_missing)
+        logger.info(f"Installing missing dependencies via pip: {safe_str}")
         if msg:
             with contextlib.suppress(Exception):
-                await msg.edit_msg(f"📦 Installing missing packages: <code>{missing_str}</code>...")
+                await msg.edit_msg(f"📦 Installing missing packages: <code>{safe_str}</code>...")
 
         proc = await asyncio.create_subprocess_exec(
             sys.executable,
@@ -425,7 +441,9 @@ class PluginManager:
             "install",
             "--prefer-binary",
             "--quiet",
-            *missing,
+            "--no-input",
+            "--",        # end-of-options: nothing after this is treated as a flag
+            *safe_missing,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

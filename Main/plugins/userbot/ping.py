@@ -12,6 +12,7 @@ from style import ping_format as pf
 from Main.core.types.client import FridayTelegramClient as Client
 from Main.core.types.message import Message
 from Main.utils.essentials import Essentials
+from Main.utils.inline_helper import send_inline_widget
 
 
 @Friday.register_on_cmd(
@@ -36,8 +37,6 @@ async def ping_ub_cmd(c: Client, m: Message):
     user_args = m.user_args
     if "c" not in user_args and "-basic" not in user_args and "-text" not in user_args:
         try:
-            from Main.utils.inline_helper import send_inline_widget
-
             if await send_inline_widget(c, m, "ping"):
                 return
         except Exception:

@@ -12,7 +12,7 @@ from Main import Friday
 from functools import wraps
 from Main.core.types import FridayTelegramClient as Client, Message
 from Main.utils.custom_filters import Filters as filters
-from Main.plugins.userbot.channel_utils import digit_wrap
+from Main.core.config import digit_wrap
 
 
 gban_db = Friday.db.make_collection("Gbans")

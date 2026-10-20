@@ -36,6 +36,8 @@ dependencies = [
     "ffmpeg-python>=0.2",
     "aiohttp-cors>=0.7",
     "loguru>=0.7",
+    "tzdata>=2024.1",
+    "heroku3>=5.1.1",
 ]
 
 [project.optional-dependencies]
@@ -43,6 +45,12 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
     "pytest-mock>=3.12",
+]
+optional = [
+    "redis>=5.0",
+    "matplotlib>=3.7",
+    "groq>=0.9",
+    "google-generativeai>=0.5",
 ]
 
 [tool.setuptools.packages.find]

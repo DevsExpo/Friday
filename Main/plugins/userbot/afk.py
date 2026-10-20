@@ -76,16 +76,13 @@ def afk_trigger_filter(c: Client, m: Message) -> bool:
         return False
     if getattr(m, "out", False) and not getattr(Friday, "self_test_mode", False):
         return False
-    # Trigger on private messages (DM)
     if m.is_private:
         return True
-    # Trigger on mention in group
     if getattr(m, "mentioned", False):
         return True
     my_uname = getattr(c.myself, "username", "") if getattr(c, "myself", None) else ""
     if my_uname and txt and f"@{my_uname.lower()}" in txt.lower():
         return True
-    # Trigger on reply to user's message in group
     my_id = getattr(c.myself, "id", 0) if getattr(c, "myself", None) else 0
     if m.reply_to_message and getattr(m.reply_to_message, "sender_id", None) == my_id:
         return True
@@ -154,8 +151,6 @@ async def set_unafk(c: Client, m: Message):
     rec = await Friday.db.settings_col.find_one({"_id": "AFK", "client_id": my_id})
     if not rec:
         return
-
-    # Grace period: if set within the last 5 seconds, do not un-afk immediately
     if time.time() - rec.get("afk_time", 0) < 5:
         return
 

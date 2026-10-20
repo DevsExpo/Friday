@@ -25,16 +25,6 @@ from Main.utils.inline_helper import is_owner
 
 
 
-def verify_owner(m: Message) -> bool:
-    sender_id = getattr(m, "sender_id", None)
-    if sender_id is None and hasattr(m, "from_user") and m.from_user:
-        sender_id = getattr(m.from_user, "id", None)
-    if is_owner(sender_id):
-        return True
-    if getattr(m, "is_self", False):
-        return True
-    return False
-
 
 def fileToBase64(file_path: str) -> str:
     """
@@ -104,12 +94,9 @@ def get_info(value=False) -> tuple:
             },
         ],
     },
+    owner_only=True
 )
 async def sTATS(c: FridayTelegramClient, m: Message):
-    if not verify_owner(m):
-            return await m.handle_message(
-            f"{STATUS.ERROR} <b>Security Violation:</b> <code>Only the userbot owner retrieve this info.</code>"
-        )
     msg = await m.handle_message("PROCESSING")
     value = m.user_args and m.user_args.a
     ub_stat = await get_info(value)

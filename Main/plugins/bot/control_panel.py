@@ -113,9 +113,33 @@ async def _render_main_panel():
     return text, buttons
 
 
+import re
+from Main.core.decorators import log_errors
+
 async def _safe_edit(target, text: str, buttons=None):
     with contextlib.suppress(Exception):
         await target.edit(text, buttons=buttons, parse_mode="html")
+
+
+@Friday.bot.on_inline_query(filters.regex(r"^panel", flags=re.IGNORECASE))
+@log_errors
+async def panel_inline_query_handler(c, iq):
+    sender_id = getattr(iq, "sender_id", None)
+    if not is_owner(sender_id):
+        return await iq.answer(
+            [],
+            switch_pm=f"{STATUS.DENIED} Access denied: Owner only.",
+            switch_pm_param="unauth",
+        )
+    text, buttons = await _render_main_panel()
+    res = iq.builder.article(
+        title=f"{ADMIN.GEAR} Friday Control Panel",
+        description="Manage system settings, PM security, progress bar, and active accounts.",
+        text=text,
+        buttons=buttons,
+        parse_mode="html",
+    )
+    await iq.answer([res])
 
 
 @Friday.bot.on_message(filters.command(["panel", "settings", "control"]))
@@ -132,21 +156,64 @@ async def bot_panel_cmd(c, m):
     ["panel", "settings", "control"],
     cmd_help={
         "help": "Open the interactive owner control panel in Telegram.",
-        "example": "panel",
+        "example": [
+            "panel",
+            "panel -basic",
+        ],
+        "user_args": [
+            {
+                "arg": "basic",
+                "help": "Force text/CLI mode without using the inline assistant bot.",
+                "requires_input": False,
+            }
+        ],
     },
+    owner_only=True,
 )
 async def userbot_panel_cmd(c, m):
     msg = await m.handle_message("PROCESSING")
     text, buttons = await _render_main_panel()
-    # Try inline widget via assistant bot if available
-    with contextlib.suppress(Exception):
-        sent = await send_inline_widget(c, m, "panel")
-        if sent:
-            await msg.delete_if_self()
-            return
 
-    # Direct edit/reply if assistant bot inline is disabled
-    await _safe_edit(msg, text, buttons=buttons)
+    # Check if running as bot account directly
+    is_bot = (getattr(c, "myself", None) and getattr(c.myself, "bot", False)) or False
+    if is_bot:
+        with contextlib.suppress(Exception):
+            await msg.delete_if_self()
+        return await m.reply(text, buttons=buttons, parse_mode="html")
+
+    # If -basic flag is passed, bypass inline widget and use CLI fallback
+    user_args = getattr(m, "user_args", None)
+    force_basic = bool(user_args and ("basic" in user_args or "-basic" in user_args))
+
+    if not force_basic:
+        # Try inline widget via assistant bot if available
+        with contextlib.suppress(Exception):
+            sent = await send_inline_widget(c, m, "panel")
+            if sent:
+                with contextlib.suppress(Exception):
+                    await msg.delete_if_self()
+                return
+
+    # Direct edit with CLI / Text mode fallback if inline is unavailable or fails
+    prefix = getattr(m, "prefix", None) or getattr(Friday, "user_command_handler", ".") or "."
+    bot_user = getattr(getattr(Friday, "bot_info", None), "username", None)
+    bot_hint = f"@{bot_user}" if bot_user else "your assistant bot"
+
+    clean_text = text.replace("<i>Use the controls below to configure features or manage the instance:</i>", "").strip()
+    cli_text = (
+        f"{clean_text}\n\n"
+        f"{STATUS.INFO} <b>Direct Management Commands:</b>\n"
+        f"• <b>PM Security:</b> <code>{prefix}pmpermit</code>\n"
+        f"• <b>Active Sessions:</b> <code>{prefix}account</code>\n"
+        f"• <b>System Health & Ping:</b> <code>{prefix}ping</code> | <code>{prefix}alive</code>\n"
+        f"• <b>Package Manager:</b> <code>{prefix}fpm</code>\n"
+        f"• <b>Sudo Permissions:</b> <code>{prefix}sudomgr</code>\n"
+        f"• <b>Prefix Handler:</b> <code>{prefix}sethandler</code>\n"
+        f"• <b>Restart Instance:</b> <code>{prefix}restart</code>\n"
+        f"• <b>Help Menu:</b> <code>{prefix}help</code>\n\n"
+        f"<i>💡 To use interactive tap buttons, ensure inline mode is enabled on {bot_hint} in @BotFather.</i>"
+    )
+    await msg.edit_msg(cli_text)
 
 
 @Friday.bot.on_callback_query(pattern=r"^panel_")

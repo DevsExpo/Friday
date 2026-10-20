@@ -11,24 +11,13 @@ import asyncio
 import logging
 from Main import Friday
 from Main.utils.suppress import suppress_error
-from typing import Union, Any
-from Main.core.config import Config
+from Main.core.config import Config, digit_wrap
 from Main.core.types.client import FridayTelegramClient as Client
 from Main.core.types.message import Message
 from telethon import errors
 
 
 logger = logging.getLogger("friday.channel_utils")
-
-
-def digit_wrap(digit_: Any) -> Union[str, int]:
-    try:
-        val = str(digit_).strip()
-        if val.lstrip("-").isdigit():
-            return int(val)
-        return digit_
-    except Exception:
-        return digit_
 
 
 @Friday.register_on_cmd(

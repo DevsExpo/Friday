@@ -7,6 +7,7 @@
 # All rights reserved.
 
 import re
+from urllib.parse import urlparse
 from .file_helpers import run_in_exc
 
 
@@ -100,12 +101,45 @@ regex = re.compile(  # noqa: W605
 
 pattern = re.compile(regex)
 
+# Hostnames/patterns that bypass the IP regex but still reach private infrastructure
+_SSRF_HOST_BLOCKLIST = re.compile(
+    r"(?:"
+    r"(?:^|\.)(?:localhost|local|internal|intranet|corp|lan)$"
+    r"|^metadata\.google\.internal$"
+    r"|^169\.254\.169\.254$"           # AWS/GCP/Azure IMDS
+    r"|^100\.100\.100\.200$"           # Alibaba IMDS
+    r"|(?:\.|\.?)nip\.io$"             # DNS-rebinding
+    r"|(?:\.|\.?)xip\.io$"
+    r"|(?:\.|\.?)sslip\.io$"
+    r"|(?:\.|\.?)traefik\.me$"
+    r")",
+    re.IGNORECASE,
+)
+
+# Regex that matches IPv6 loopback [::1] or [fe80::...] in a URL host
+_IPV6_LOOPBACK_RE = re.compile(r"\[(?:::1|fe80:[^\]]*|::(?:ffff:)?(?:127|10|192\.168|172\.(?:1[6-9]|2\d|3[01]))[^\]]*)\]", re.IGNORECASE)
+
 
 @run_in_exc
 def is_url(value, public=False):
     if value is None:
         return False
     result = pattern.match(value)
+    if not result:
+        return False
     if not public:
         return result
-    return result and not any((result.groupdict().get(key) for key in ("private_ip", "private_host")))
+    # Block private IPs matched by regex named groups
+    if any(result.groupdict().get(key) for key in ("private_ip", "private_host")):
+        return False
+    # Block IPv6 loopback / link-local embedded in brackets
+    if _IPV6_LOOPBACK_RE.search(value):
+        return False
+    # Block cloud metadata and DNS-rebinding hostnames
+    try:
+        host = urlparse(value).hostname or ""
+        if _SSRF_HOST_BLOCKLIST.search(host):
+            return False
+    except Exception:
+        pass
+    return result

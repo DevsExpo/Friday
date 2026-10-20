@@ -14,9 +14,10 @@ from Main.core.types.client import FridayTelegramClient as Client
 from Main.core.types.message import Message
 from Main.utils.custom_filters import filters
 from Main.utils.ui_tokens import ADMIN, INDICATOR, STATUS
+from Main.utils.inline_helper import is_inline_available, send_inline_widget
+from Main.utils.pm_panel import pm_permit_warning_cache, render_pmpermit_panel
 
 
-pm_permit_warning_cache = {}
 __last_message_cache = {}
 
 
@@ -279,15 +280,11 @@ async def pm_permit_command_handler(c: Client, m: Message):
         getattr(Friday, "bot_info", None) and getattr(c, "myself", None) and c.myself.id == Friday.bot_info.id
     )
     if is_bot:
-        from Main.plugins.bot.pm_security_inline import _render_pmpermit_panel
-
-        text, buttons = await _render_pmpermit_panel()
+        text, buttons = await render_pmpermit_panel()
         return await m.reply(text, buttons=buttons, parse_mode="html")
 
     if "-basic" not in user_args and "-text" not in user_args:
         try:
-            from Main.utils.inline_helper import send_inline_widget
-
             if await send_inline_widget(c, m, "pmpermit"):
                 return
         except Exception:
@@ -470,8 +467,6 @@ async def pm_permit_new_message_listener_handler(c: Client, m: Message):
 
     out = None
     try:
-        from Main.utils.inline_helper import is_inline_available
-
         if is_inline_available() and getattr(Friday, "bot_info", None):
             bot_username = getattr(Friday.bot_info, "username", None)
             if bot_username:

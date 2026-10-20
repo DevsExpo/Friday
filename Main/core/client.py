@@ -43,8 +43,10 @@ from Main.utils.paste import Paste
 from ..utils._updater import Updater
 from .config import Config
 from ..utils.suppress import suppress_error, safe_suppress, suppress
+from ..utils.file_helpers import purge_stale_files
 from .database import MongoDB, LocalDatabase, SQLDatabase, create_database
 from .plugin_manager import PluginManager
+from .fpm_env_setup import sync_xtra_plugins_repos
 from .types.client import FridayTelegramClient
 from .types.message import enrich_message
 from ..utils.custom_filters import filters as default_filters, Filter
@@ -55,31 +57,7 @@ from .localization import LocalizationManager
 
 logger = logging.getLogger("Friday")
 
-# Commands that are restricted to the owner only and blocked from sudo users.
-# Centralised here to avoid copy-paste drift across the codebase.
-_OWNER_ONLY_CMDS: frozenset = frozenset(
-    {
-        "subcategories",
-        "eval",
-        "exec",
-        "bash",
-        "sh",
-        "terminal",
-        "py",
-        "install",
-        "addsudo",
-        "rmsudo",
-        "dpfs",
-        "rmdfs",
-        "restart",
-        "reload",
-        "shutdown",
-        "update",
-        "add_session",
-        "session",
-        "token",
-    }
-)
+
 
 
 class BotWrapper:
@@ -263,6 +241,23 @@ class FridayClient:
                 users.add(int(cl.myself.id))
         return list(users)
 
+    def _resolve_is_owner(self, sender_id: Optional[int]) -> bool:
+        """Return True if sender_id belongs to OWNER_ID or any active userbot account."""
+        if not sender_id:
+            return False
+        owner_id = getattr(self.config, "OWNER_ID", None)
+        with contextlib.suppress(Exception):
+            if owner_id and int(sender_id) == int(owner_id):
+                return True
+        for acc in getattr(self, "ourselves", []) or []:
+            if getattr(acc, "id", None) == sender_id:
+                return True
+        for cl in getattr(self, "clients", []) or []:
+            myself = getattr(cl, "myself", None)
+            if myself is not None and getattr(myself, "id", None) == sender_id:
+                return True
+        return False
+
     async def resolve_dns(self) -> None:
         try:
             import dns.resolver
@@ -278,7 +273,6 @@ class FridayClient:
 
     async def _db_setup(self) -> None:
         with contextlib.suppress(Exception):
-            from Main.utils.file_helpers import purge_stale_files
             purged = purge_stale_files()
             if purged:
                 self.log(f"Cleaned {purged} stale temporary file(s).")
@@ -367,11 +361,20 @@ class FridayClient:
         bot_mode_unsupported: bool = False,
         group: int = 1,
         disallow_if_sender_is_channel: bool = False,
+        owner_only: bool = False,
     ):
         if isinstance(cmd, str):
             cmd = [cmd]
         self.cmd_list_s.extend(cmd)
         _help_map: Dict[str, Any] = cmd_help if cmd_help is not None else {}
+        if not owner_only:
+            owner_only = bool(
+                _help_map.get("owner_only")
+                or _help_map.get("owner")
+                or (_help_map.get("sudo") is False)
+                or (_help_map.get("sudo_allowed") is False)
+                or (_help_map.get("allow_sudo") is False)
+            )
         previous_stack_frame = inspect.stack()[1]
         file_name = os.path.basename(previous_stack_frame.filename.replace(".py", ""))
         self.add_help_to_command_list(
@@ -384,6 +387,7 @@ class FridayClient:
             channel_only=channel_only,
             private_only=pm_only,
             bot_mode_unsupported=bot_mode_unsupported,
+            owner_only=owner_only,
         )
 
         def decorator(func: Callable):
@@ -401,6 +405,7 @@ class FridayClient:
                 "bot_mode_unsupported": bot_mode_unsupported,
                 "group": group,
                 "disallow_if_sender_is_channel": disallow_if_sender_is_channel,
+                "owner_only": owner_only,
             }
             self._pending_handlers.append(handler_info)
             for client in self.clients:
@@ -465,53 +470,58 @@ class FridayClient:
 
                     sender_id = getattr(event, "sender_id", None)
                     sudo_users = getattr(self.config, "SUDO_USERS", []) or []
+                    owner_only = handler_entry.get("owner_only", False)
 
                     if is_bot_client:
-                        # Security: only owner and authorized sudo users may execute bot commands
-                        owner_id = getattr(self.config, "OWNER_ID", None)
-                        is_owner = False
-                        if owner_id and sender_id == owner_id:
-                            is_owner = True
-                        elif hasattr(self, "ourselves"):
-                            for acc in self.ourselves:
-                                if hasattr(acc, "id") and sender_id == acc.id:
-                                    is_owner = True
-                                    break
-
+                        # Security: owner recognised via the single shared _resolve_is_owner helper
+                        is_owner = self._resolve_is_owner(sender_id)
                         is_sudo = bool(sender_id and sender_id in sudo_users)
 
                         if not is_owner and not is_sudo:
                             return
 
+                        if owner_only and not is_owner:
+                            return
+
                         # Sudo user restrictions:
                         if is_sudo and not is_owner:
-                            # 1. Check disabled sudo plugins / commands
-                            disabled = getattr(self, "disabled_sudo_plugin_list", []) or []
-                            if isinstance(disabled, (list, tuple, set)) and cmd_name in {
-                                str(x).lower() for x in disabled
-                            }:
-                                return
-                            if cmd_name in _OWNER_ONLY_CMDS or handler_entry.get("file_name") in _OWNER_ONLY_CMDS:
-                                return
+                            # 1. Check disabled sudo plugins / commands (match by cmd name OR file stem)
+                            disabled = {str(x).lower() for x in (getattr(self, "disabled_sudo_plugin_list", []) or [])}
+                            if disabled:
+                                file_stem = str(handler_entry.get("file_name") or "").lower()
+                                if cmd_name in disabled or (file_stem and file_stem in disabled):
+                                    return
                     else:
-                        is_self = getattr(event, "out", False)
-                        if not is_self and hasattr(client, "myself") and client.myself:
-                            if getattr(event, "sender_id", None) == client.myself.id:
-                                is_self = True
+                        # Client isolation: strictly verify against this specific client's identity
+                        my_id = (
+                            getattr(client.myself, "id", None)
+                            if hasattr(client, "myself") and client.myself
+                            else None
+                        )
+                        is_self = bool(getattr(event, "out", False))
+                        if not is_self and hasattr(event, "from_user") and event.from_user:
+                            is_self = bool(getattr(event.from_user, "is_self", False))
+                        if not is_self and my_id is not None and sender_id == my_id:
+                            is_self = True
+
+                        is_owner_sender = self._resolve_is_owner(sender_id)
 
                         if prefix == user_p:
-                            if not is_self:
+                            # User commands: self OR verified owner
+                            if not is_self and not is_owner_sender:
                                 return
                         elif prefix == sudo_p:
-                            if not sender_id or sender_id not in sudo_users:
-                                return
-                            if cmd_name in _OWNER_ONLY_CMDS or handler_entry.get("file_name") in _OWNER_ONLY_CMDS:
-                                return
-                            disabled = getattr(self, "disabled_sudo_plugin_list", []) or []
-                            if isinstance(disabled, (list, tuple, set)) and cmd_name in {
-                                str(x).lower() for x in disabled
-                            }:
-                                return
+                            # Sudo prefix: allow self/owner unconditionally; restrict others
+                            if not is_self and not is_owner_sender:
+                                if not sender_id or sender_id not in sudo_users:
+                                    return
+                                if owner_only:
+                                    return
+                                disabled = {str(x).lower() for x in (getattr(self, "disabled_sudo_plugin_list", []) or [])}
+                                if disabled:
+                                    file_stem = str(handler_entry.get("file_name") or "").lower()
+                                    if cmd_name in disabled or (file_stem and file_stem in disabled):
+                                        return
                         else:
                             return
 
@@ -717,12 +727,22 @@ class FridayClient:
         channel_only: bool,
         private_only: bool,
         bot_mode_unsupported: bool = False,
+        owner_only: bool = False,
     ) -> None:
+        if isinstance(commands, str):
+            commands = [commands]
+        help_map = help_map or {}
+        if not owner_only:
+            owner_only = bool(
+                help_map.get("owner_only")
+                or help_map.get("owner")
+                or (help_map.get("sudo") is False)
+                or (help_map.get("sudo_allowed") is False)
+                or (help_map.get("allow_sudo") is False)
+            )
         example = help_map.get("example", "No example available")
         help_text = html.escape(str(help_map.get("help", "Sorry, No help available for this command")))
         user_args = help_map.get("user_args")
-        if isinstance(commands, str):
-            commands = [commands]
         data = {
             "commands": commands,
             "help": help_text,
@@ -734,11 +754,18 @@ class FridayClient:
             "channel_only": channel_only,
             "private_only": private_only,
             "bot_mode_unsupported": bot_mode_unsupported,
+            "owner_only": owner_only,
         }
         if file_name not in self.cmd_list:
             self.cmd_list[file_name] = [data]
-        elif commands[0] not in [x.get("commands", [""])[0] for x in self.cmd_list[file_name]]:
-            self.cmd_list[file_name].append(data)
+        else:
+            for idx, existing in enumerate(self.cmd_list[file_name]):
+                existing_cmds = existing.get("commands", [])
+                if any(c in existing_cmds for c in commands):
+                    self.cmd_list[file_name][idx].update(data)
+                    break
+            else:
+                self.cmd_list[file_name].append(data)
 
     @property
     def http(self) -> httpx.AsyncClient:
@@ -805,6 +832,12 @@ class FridayClient:
         if not string_sessions:
             self.training_wheels_protocol = True
             self.log("No User Session found; userbot features will run in TWP mode.", level=logging.WARNING)
+            owner_id = getattr(self.config, "OWNER_ID", None)
+            if not owner_id:
+                with contextlib.suppress(Exception):
+                    from Main.internals.make_session import get_or_create_twp_code
+
+                    get_or_create_twp_code()
         else:
             self.log("User Sessions found, connecting via Telethon StringSession...")
             for idx, session_str in enumerate(string_sessions):
@@ -910,10 +943,42 @@ class FridayClient:
         """Compatibility entry point used by the updater."""
         await self.reboot(**kwargs)
 
+    @staticmethod
+    def _project_root() -> Path:
+        """Absolute path of the repository root (the directory holding ``Main/``)."""
+        return Path(__file__).resolve().parents[2]
+
+    def _module_name_for_path(self, file_path: str) -> str:
+        """Derive the *real* dotted import path of a plugin file.
+
+        The loader used to build ``Main.<parent-dir-name>.<stem>``, which does not
+        match the file's genuine import path (``Main/plugins/bot/alive.py`` is
+        ``Main.plugins.bot.alive``, not ``Main.bot.alive``).  Because the two
+        differed, every ``from Main.plugins... import ...`` re-executed the whole
+        module, duplicating its handler registrations and splitting shared state
+        such as ``pm_permit_warning_cache``.
+
+        Deriving the name from the path relative to the project root keeps the
+        ``sys.modules`` key identical to the real import path, so imports become
+        plain ``sys.modules`` hits and a module is only ever executed once.
+        """
+        path = Path(file_path).resolve()
+        for base in (self._project_root(), Path.cwd().resolve()):
+            try:
+                rel = path.relative_to(base)
+            except ValueError:
+                continue
+            parts = list(rel.parts)
+            if parts[-1].endswith(".py"):
+                parts[-1] = parts[-1][: -len(".py")]
+            return ".".join(parts)
+        # Fallback for files outside the project tree: keep the historic behaviour.
+        return f"Main.{path.parent.name}.{path.stem}"
+
     async def load_from_directory(
         self, path_pattern: str, log: bool = True, msg: Any = None, category: Optional[str] = None
     ) -> None:
-        helper_scripts = glob.glob(path_pattern, recursive=True)
+        helper_scripts = sorted(glob.glob(path_pattern, recursive=True))
         if not helper_scripts:
             return
         clean_pat = path_pattern.replace("\\", "/").lower()
@@ -938,7 +1003,13 @@ class FridayClient:
                 self.extra_plugins.add(p_name)
                 self.main_plugins.discard(p_name)
 
-            module_name = f"Main.{path_obj.parent.name}.{plugin_name}"
+            module_name = self._module_name_for_path(file_path)
+            if module_name in sys.modules:
+                # Already executed under its real import path - never run it twice,
+                # otherwise its handlers would be registered a second time.
+                if log:
+                    self.log(f"Loaded plugin: {plugin_name}")
+                continue
             spec = importlib.util.spec_from_file_location(module_name, file_path)
             if spec and spec.loader:
                 mod = importlib.util.module_from_spec(spec)
@@ -951,6 +1022,7 @@ class FridayClient:
                 mod.safe_suppress = safe_suppress
                 mod.suppress = suppress
                 sys.modules[module_name] = mod
+                self._bind_to_parent_package(module_name, mod)
                 try:
                     spec.loader.exec_module(mod)
                     if log:
@@ -958,6 +1030,29 @@ class FridayClient:
                 except Exception as err:
                     sys.modules.pop(module_name, None)
                     self.log(f"Failed to load plugin {plugin_name}: {err}", level=logging.ERROR)
+
+    @staticmethod
+    def _bind_to_parent_package(module_name: str, mod: Any) -> None:
+        """Make ``import Main.plugins.bot.alive`` resolve to the loaded module.
+
+        The loader registers modules under their real dotted path, but it does
+        not go through the import machinery, so the parent packages are never
+        imported and the ``parent.child`` attribute chain is missing.  Importing
+        the parent chain restores it (``Main.plugins`` and ``Main.plugins.bot``
+        are namespace packages) and mirrors what a normal import would have
+        done.
+        """
+        parent_name, _, child_name = module_name.rpartition(".")
+        if not parent_name:
+            return
+        try:
+            parent = importlib.import_module(parent_name)
+        except Exception:
+            return
+        try:
+            setattr(parent, child_name, mod)
+        except Exception:
+            pass
 
     async def load_all_modules(self) -> None:
         await self.load_from_directory("Main/utils/*.py", log=False)
@@ -983,8 +1078,6 @@ class FridayClient:
             load_xtra = bool(self.config.LOAD_XTRA_PLUGINS)
         if load_xtra:
             try:
-                from Main.core.fpm_env_setup import sync_xtra_plugins_repos
-
                 loop = asyncio.get_running_loop()
                 await loop.run_in_executor(None, sync_xtra_plugins_repos)
             except Exception as e:
@@ -1030,7 +1123,19 @@ class FridayClient:
 
                 bot_status = "👤 Userbot Only" if bot_unsupported else "🤖 Bot & Userbot"
 
-                is_owner_only = any(c.lower() in _OWNER_ONLY_CMDS for c in cmds) or (p_name in _OWNER_ONLY_CMDS)
+                is_owner_only = bool(
+                    cmd_info.get("owner_only", False)
+                    or any(
+                        getattr(cl, "_cmd_handlers_map", {}).get(c.lower(), {}).get("owner_only", False)
+                        for cl in (getattr(self, "clients", []) or [])
+                        for c in cmds
+                    )
+                    or any(
+                        h.get("owner_only", False)
+                        for h in (getattr(self, "_pending_handlers", []) or [])
+                        if any(c in (h.get("cmd", []) if isinstance(h.get("cmd"), list) else [h.get("cmd")]) for c in cmds)
+                    )
+                )
                 is_sudo_disabled = any(c.lower() in disabled_sudo for c in cmds) or (p_name in disabled_sudo)
                 if is_owner_only:
                     sudo_status = "👑 Owner Only (Sudo Blocked)"

@@ -24,6 +24,7 @@ from Main.utils.ui_tokens import STATUS
         ],
     },
     requires_input=True,
+    owner_only=True,
 )
 @log_errors
 async def set_handler_cmd(c: Client, m: Message):

@@ -8,6 +8,7 @@
 
 import time
 import platform
+import contextlib
 from platform import python_version
 
 import telethon
@@ -94,7 +95,6 @@ async def alive_callback_handler(c, cb):
     if data == "alive_refresh":
         text, buttons = _make_alive_content()
         await cb.answer(f"{ADMIN.RELOAD} Status refreshed!")
-        import contextlib
 
         with contextlib.suppress(Exception):
             await cb.edit(text, buttons=buttons, parse_mode="html")
@@ -103,7 +103,6 @@ async def alive_callback_handler(c, cb):
     if data == "alive_close":
         if not is_owner_cb(cb):
             return await cb.answer(f"{STATUS.DENIED} Only the bot owner can close this widget.", alert=True)
-        import contextlib
 
         with contextlib.suppress(Exception):
             await cb.delete()

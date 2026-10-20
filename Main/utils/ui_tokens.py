@@ -54,6 +54,7 @@ ADMIN = SimpleNamespace(
     USER="👤",
     USERS="👥",
     BOT="🤖",
+    GEAR="⚙️",
     PACKAGE="📦",
     RELOAD="🔄",
     METRICS="📊",

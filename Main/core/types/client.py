@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from telethon import TelegramClient, functions, types, errors, utils
 from cachetools import TTLCache
+from Main.core.html_parser import patch_telethon_html
 from Main.core.types.message import enrich_message
 
 logger = logging.getLogger("friday.client")
@@ -61,8 +62,6 @@ class FridayTelegramClient(TelegramClient):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__class__.__module__ = "telethon.client.telegramclient"
-        from Main.core.html_parser import patch_telethon_html
-
         patch_telethon_html()
         self.parse_mode = "html"
         self.myself: Optional[types.User] = None
@@ -304,7 +303,6 @@ class FridayTelegramClient(TelegramClient):
 
     async def upload_doc(self, file_path: str, peer: Any = None, force_file: bool = False) -> types.InputDocument:
         """Upload a file and return an InputDocument representation."""
-        from telethon import utils
 
         uploaded = await self.upload_file(file_path)
         mime = self.guess_mime_type(file_path)

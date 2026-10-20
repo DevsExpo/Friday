@@ -13,6 +13,7 @@ from Main import Friday
 from Main.utils.custom_filters import filters
 from Main.core.decorators import log_errors
 from Main.utils.ui_tokens import NAV, STATUS
+from Main.utils.inline_helper import is_owner_cb
 from telethon import custom
 
 
@@ -69,6 +70,9 @@ async def settings_command_handler(c, m):
 @Friday.bot.on_callback_query(filters.regex(r"sessions_list_(\d+)$"))
 @log_errors
 async def sessions_menu_cb_handler(c, cb):
+    # P7: Only the owner may browse or manage sessions
+    if not is_owner_cb(cb):
+        return await cb.answer("Unauthorized.", alert=True)
     await cb.answer()
     match = re.search(r"sessions_list_(\d+)$", cb.data.decode("utf-8") if isinstance(cb.data, bytes) else str(cb.data))
     page = int(match.group(1)) if match else 1
@@ -87,6 +91,8 @@ async def sessions_menu_cb_handler(c, cb):
 @Friday.bot.on_callback_query(filters.regex(r"session_info_(\d+)_(\d+)$"))
 @log_errors
 async def sessions_info_cb_handler(c, cb):
+    if not is_owner_cb(cb):
+        return await cb.answer("Unauthorized.", alert=True)
     await cb.answer()
     data_str = cb.data.decode("utf-8") if isinstance(cb.data, bytes) else str(cb.data)
     match = re.search(r"session_info_(\d+)_(\d+)$", data_str)
@@ -121,6 +127,8 @@ async def sessions_info_cb_handler(c, cb):
 @Friday.bot.on_callback_query(filters.regex(r"refresh_session_info_(\d+)$"))
 @log_errors
 async def refresh_session_info_cb_handler(c, cb):
+    if not is_owner_cb(cb):
+        return await cb.answer("Unauthorized.", alert=True)
     data_str = cb.data.decode("utf-8") if isinstance(cb.data, bytes) else str(cb.data)
     match = re.search(r"refresh_session_info_(\d+)$", data_str)
     if match:
@@ -133,6 +141,8 @@ async def refresh_session_info_cb_handler(c, cb):
 @Friday.bot.on_callback_query(filters.regex(r"unlink_session_(\d+)$"))
 @log_errors
 async def unlink_session_cb_handler(c, cb):
+    if not is_owner_cb(cb):
+        return await cb.answer("Unauthorized.", alert=True)
     data_str = cb.data.decode("utf-8") if isinstance(cb.data, bytes) else str(cb.data)
     match = re.search(r"unlink_session_(\d+)$", data_str)
     if not match:

@@ -35,4 +35,5 @@ async def prepare_heroku_url():
     if not heroku_app:
         logging.info("Looks like the api key is correct but, heroku app name isn't in the list of apps.")
         return None
+    # P6: Embed the key in the URL only for git push; never log this value
     return heroku_app.git_url.replace("https://", f"https://api:{config.HEROKU_API_KEY}@")
