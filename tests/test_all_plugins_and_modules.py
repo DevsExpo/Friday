@@ -438,9 +438,11 @@ async def test_devtools_security_owner_enforcement():
     stranger_msg.handle_message = AsyncMock(return_value=stranger_msg)
     stranger_msg.edit_msg = AsyncMock(return_value=stranger_msg)
 
+    # evaluate_command_handler calls m.handle_message() for non-owner security rejection
     await devtools_mod.evaluate_command_handler(mock_client, stranger_msg)
-    assert "Security Violation" in stranger_msg.edit_msg.call_args[0][0]
+    assert "Security Violation" in stranger_msg.handle_message.call_args[0][0]
 
+    stranger_msg.handle_message.reset_mock()
     stranger_msg.text = ".terminal whoami"
     await devtools_mod.terminal(mock_client, stranger_msg)
     assert "Security Violation" in stranger_msg.handle_message.call_args[0][0]
@@ -448,7 +450,7 @@ async def test_devtools_security_owner_enforcement():
 
 @pytest.mark.asyncio
 async def test_cloud_tools_rm_security_root_protection():
-    """Verify rm command protects root filesystem paths from deletion."""
+    """Verify rm command blocks deletion of root filesystem paths."""
     import Main.plugins.userbot.cloud_tools as cloud_mod
     from telethon import types as tl_types
 
@@ -460,4 +462,7 @@ async def test_cloud_tools_rm_security_root_protection():
     mock_msg.edit = AsyncMock(return_value=mock_msg)
 
     await cloud_mod.remove_cmd_handler(mock_client, mock_msg)
-    assert "Security Violation" in mock_msg.edit.call_args[0][0]
+    # get_safe_path("/") returns None because "/" escapes the project root sandbox;
+    # the handler rejects it with "Invalid path or access denied."
+    call_text = mock_msg.edit.call_args[0][0]
+    assert "Invalid path or access denied" in call_text or "Security" in call_text
