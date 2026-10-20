@@ -13,7 +13,7 @@ from Main.utils.custom_filters import filters
 from Main.core.decorators import log_errors, iuser_check
 from telethon import custom
 from Main.utils.ui_tokens import NAV, STATUS
-from Main.utils.help_menu import get_help_menu, get_plugin_data, help_text
+from Main.utils.help_menu import get_help_header, get_help_menu, get_plugin_data
 
 
 @Friday.bot.on_callback_query(filters.regex("close_help"))
@@ -86,7 +86,7 @@ async def help_inline(c, iq):
         buttons = await get_help_menu(category="all", page=0)
         result = builder.article(
             title="Help Menu",
-            text=help_text,
+            text=await get_help_header(category="all", page=0),
             parse_mode="html",
             buttons=buttons,
         )
@@ -113,7 +113,7 @@ async def help_inline(c, iq):
 @iuser_check
 async def re_help(c, cq):
     buttons = await get_help_menu(category="all", page=0)
-    await cq.edit(help_text, buttons=buttons, parse_mode="html")
+    await cq.edit(await get_help_header(category="all", page=0), buttons=buttons, parse_mode="html")
 
 
 @Friday.bot.on_callback_query(filters.regex(r"^help(?:#([a-zA-Z0-9_]+)(?:\?(.*))?)?$"))
@@ -124,7 +124,9 @@ async def help_callback(c, cq):
     match = re.search(r"^help(?:#([a-zA-Z0-9_]+)(?:\?(.*))?)?$", data_str)
     if not match or not match.group(1):
         buttons = await get_help_menu(category="all", page=0)
-        return await cq.edit(help_text, buttons=buttons, parse_mode="html")
+        return await cq.edit(
+            await get_help_header(category="all", page=0), buttons=buttons, parse_mode="html"
+        )
 
     text = match.group(1)
     query_str = match.group(2) or ""
@@ -134,7 +136,9 @@ async def help_callback(c, cq):
 
     if text in ("_page", "_cat"):
         buttons = await get_help_menu(category=category, page=page)
-        return await cq.edit(help_text, buttons=buttons, parse_mode="html")
+        return await cq.edit(
+            await get_help_header(category=category, page=page), buttons=buttons, parse_mode="html"
+        )
 
     if text.lower() not in Friday._command_help_message_data:
         return await cq.answer(Friday.get_string("PLUGIN_404") or "Plugin not found")
@@ -158,7 +162,7 @@ async def bot_help_message_handler(c, m):
 
     if not plugin:
         buttons = await get_help_menu(category="all", page=0)
-        await m.reply(help_text, buttons=buttons, parse_mode="html")
+        await m.reply(await get_help_header(category="all", page=0), buttons=buttons, parse_mode="html")
     elif plugin in Friday._command_help_message_data:
         p_text, p_buttons = await get_plugin_data(plugin, page=0, category="all")
         await m.reply(p_text, buttons=p_buttons, parse_mode="html")

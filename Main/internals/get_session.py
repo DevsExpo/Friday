@@ -27,7 +27,7 @@ from Main.internals.make_session import (
 )
 from Main.internals.make_session import _PENDING_LOGINS
 from Main.utils.suppress import suppress_error
-from Main.utils.help_menu import get_help_menu, help_text
+from Main.utils.help_menu import get_help_header, get_help_menu
 
 
 def _get_db_badge() -> str:
@@ -208,7 +208,9 @@ async def start_command_handler(c, m):
             return await m.reply("⚠️ <i>You are not authorized to use this bot.</i>", parse_mode="html")
 
         buttons = await get_help_menu(category="all", page=0)
-        return await m.reply(help_text, buttons=buttons, parse_mode="html")
+        return await m.reply(
+            await get_help_header(category="all", page=0), buttons=buttons, parse_mode="html"
+        )
 
     if not payload:
         path_ = "./cache/bot_st_media.*"

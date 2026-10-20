@@ -1153,20 +1153,19 @@ class FridayClient:
                 else:
                     scope = "🌐 All Chats"
 
-                self._command_help_message_data[p_name] += "\n<b>Command:</b> "
+                self._command_help_message_data[p_name] += "\n<b>▸ </b>"
                 for c in cmds:
-                    self._command_help_message_data[p_name] += f"<code>{self.user_command_handler}{c}</code> / "
-                self._command_help_message_data[p_name] = self._command_help_message_data[p_name].rstrip("/ ") + "\n"
-                self._command_help_message_data[p_name] += f"<b>Help:</b> <i>{h_text}</i>\n"
-                self._command_help_message_data[p_name] += f"<b>Mode:</b> {bot_status}  |  <b>Sudo:</b> {sudo_status}\n"
-                self._command_help_message_data[p_name] += f"<b>Scope:</b> {scope}"
+                    self._command_help_message_data[p_name] += f"<code>{self.user_command_handler}{c}</code> "
+                self._command_help_message_data[p_name] = self._command_help_message_data[p_name].rstrip() + "\n"
+                self._command_help_message_data[p_name] += f"<i>{h_text}</i>\n"
+                self._command_help_message_data[p_name] += f"{bot_status} · {sudo_status} · {scope}"
                 reqs = []
                 if r_reply:
                     reqs.append("↩️ Reply Needed")
                 if r_input:
                     reqs.append("✍️ Input Needed")
                 if reqs:
-                    self._command_help_message_data[p_name] += f" (<i>{', '.join(reqs)}</i>)"
+                    self._command_help_message_data[p_name] += f" · <i>{', '.join(reqs)}</i>"
                 self._command_help_message_data[p_name] += "\n"
 
                 if ex_text:
@@ -1190,21 +1189,18 @@ class FridayClient:
                         formatted_examples.append(f"{prefix}{clean_ex}")
 
                     if formatted_examples:
-                        if len(formatted_examples) == 1:
-                            self._command_help_message_data[p_name] += (
-                                f"<b>Example:</b> <code>{html.escape(formatted_examples[0])}</code>\n"
-                            )
-                        else:
-                            self._command_help_message_data[p_name] += "<b>Examples:</b>\n"
-                            for fex in formatted_examples:
-                                self._command_help_message_data[p_name] += f"  • <code>{html.escape(fex)}</code>\n"
+                        self._command_help_message_data[p_name] += "\n<b>Examples</b>\n"
+                        for fex in formatted_examples:
+                            self._command_help_message_data[p_name] += f"<code>{html.escape(fex)}</code>\n"
                 if user_args:
-                    self._command_help_message_data[p_name] += "<b>Flags:</b>\n"
+                    self._command_help_message_data[p_name] += "\n<b>Flags</b>\n"
                     for arg in user_args:
                         arg_name = arg.get("arg", "")
                         arg_help = arg.get("help", "")
-                        req = " <i>[input required]</i>" if arg.get("requires_input", False) else ""
-                        self._command_help_message_data[p_name] += f"  • <code>-{arg_name}</code>: {arg_help}{req}\n"
+                        req = " <i>[required]</i>" if arg.get("requires_input", False) else ""
+                        self._command_help_message_data[p_name] += f"<code>-{arg_name}</code> — {arg_help}{req}\n"
+
+                self._command_help_message_data[p_name] += "\n<i>┈┈┈┈┈┈┈┈┈</i>\n"
 
     _build_command_help_message = prepare_help
 
